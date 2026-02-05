@@ -1,44 +1,57 @@
 package com.vctmedia.util;
 
-import com.vctmedia.ViciontMediaClient;
 import com.vctmedia.render.TextureWrapper;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.util.Identifier;
-import org.watermedia.api.image.ImageAPI;
-import org.watermedia.api.image.ImageCache;
-import org.watermedia.api.player.videolan.VideoPlayer;
-import org.watermedia.core.tools.IOTool;
-
-import java.net.URI;
-import java.util.concurrent.CompletableFuture;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class MediaOrchestrator {
-    private static TextureWrapper currentMedia;
-    public static final Identifier DYNAMIC_ID = Identifier.of("vctmedia", "active_media");
+    private static final List<TextureWrapper> activeMedias = new CopyOnWriteArrayList<>();
 
-    public static int posX, posY, renderSize;
+    public static void process(String url, long duration, int x, int y, int size, boolean isOverlay) {
+        if (!isOverlay) {
+            // Solo borramos los que NO son overlay
+            activeMedias.removeIf(m -> {
+                if (!m.isOverlay) {
+                    m.release();
+                    return true;
+                }
+                return false;
+            });
+        }
+        TextureWrapper media = new TextureWrapper(url, duration, x, y, size, isOverlay);
+        media.loadAsync();
+        activeMedias.add(media);
+    }
 
-    public static void process(String url, long duration, int x, int y, int size) {
-        stopAll();
-        posX = x; posY = y; renderSize = size;
-
-        // Estructura tipo Sticker: Creamos el wrapper vacío y le ordenamos cargar
-        currentMedia = new TextureWrapper(url, duration);
-        currentMedia.loadAsync();
+    public static void edit(String name, long duration, int x, int y, int size, boolean overlay) {
+        for (TextureWrapper m : activeMedias) {
+            if (m.url.contains(name)) {
+                m.x = x;
+                m.y = y;
+                m.size = size;
+                m.isOverlay = overlay;
+                m.updateLoopLogic(duration);
+            }
+        }
     }
 
     public static void stopAll() {
-        if (currentMedia != null) {
-            currentMedia.release();
-            currentMedia = null;
-        }
+        for (TextureWrapper m : activeMedias) m.release();
+        activeMedias.clear();
     }
 
-    public static TextureWrapper getActive() {
-        if (currentMedia != null && currentMedia.isExpired()) {
-            stopAll();
-            return null;
-        }
-        return currentMedia;
+    public static void stopSpecific(String name) {
+        activeMedias.removeIf(m -> {
+            if (m.url.contains(name)) { m.release(); return true; }
+            return false;
+        });
+    }
+
+    public static List<TextureWrapper> getActiveList() {
+        activeMedias.removeIf(m -> {
+            if (m.isExpired()) { m.release(); return true; }
+            return false;
+        });
+        return activeMedias;
     }
 }

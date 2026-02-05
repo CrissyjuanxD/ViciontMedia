@@ -13,30 +13,51 @@ import javax.imageio.ImageIO;
 import java.io.File;
 
 public class TextureWrapper {
-    private final String url;
-    private final long duration;
+    public final String url;
+    // Campos mutables para permitir vctedit
+    public long duration;
+    public int x, y, size;
+    public boolean isOverlay;
+
     private ImageRenderer gif;
     private VideoPlayer video;
     private ImageCache cache;
     private long endTime = -1;
-    private long startTime = -1; // Para sincronización precisa
+    private long startTime = -1;
+    private int maxLoops = -1;
     private boolean loading = false;
 
-    public TextureWrapper(String url, long duration) {
+    public TextureWrapper(String url, long duration, int x, int y, int size, boolean isOverlay) {
         this.url = url;
         this.duration = duration;
+        this.x = x;
+        this.y = y;
+        this.size = size;
+        this.isOverlay = isOverlay;
+        updateLoopLogic(duration);
+    }
+
+    public void updateLoopLogic(long newDuration) {
+        this.duration = newDuration;
+        if (newDuration > 0 && newDuration < 1000) {
+            this.maxLoops = (int) newDuration;
+            this.endTime = -1;
+        } else if (newDuration >= 1000) {
+            this.maxLoops = -1;
+            if (startTime != -1) this.endTime = startTime + newDuration;
+        } else {
+            this.maxLoops = -1;
+            this.endTime = -1;
+        }
     }
 
     public void loadAsync() {
         if (loading) return;
         loading = true;
-
         CompletableFuture.runAsync(() -> {
             try {
                 String lower = url.toLowerCase();
-                boolean isImage = lower.endsWith(".gif") || lower.endsWith(".png") ||
-                        lower.endsWith(".jpg") || lower.endsWith(".jpeg");
-
+                boolean isImage = lower.endsWith(".gif") || lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg");
                 if (isImage) {
                     if (url.startsWith("http")) {
                         this.cache = ImageAPI.getCache(URI.create(url), MinecraftClient.getInstance());
@@ -59,7 +80,7 @@ public class TextureWrapper {
                     });
                 }
                 this.startTime = System.currentTimeMillis();
-                if (duration > 0) this.endTime = startTime + duration;
+                if (duration >= 1000) this.endTime = startTime + duration;
             } catch (Exception e) { e.printStackTrace(); }
         });
     }
@@ -69,35 +90,28 @@ public class TextureWrapper {
             this.gif = cache.getRenderer();
             this.cache = null;
         }
-
         if (gif != null) {
-            // Lógica de Owleaf: Tiempo transcurrido desde el inicio del objeto
-            return gif.texture(System.currentTimeMillis() - startTime);
+            long time = System.currentTimeMillis() - startTime;
+            // CORRECCIÓN GIF: Si es bucle o quedan vueltas, usamos el módulo para reiniciar el frame
+            if (gif.duration > 0) {
+                time = time % gif.duration;
+            }
+            return gif.texture(time);
         }
         if (video != null && video.isReady()) return video.texture();
         return -1;
     }
 
-    public int getWidth() {
-        if (gif != null) return gif.width;
-        if (video != null && video.isReady()) return video.width();
-        return 1;
-    }
-
-    public int getHeight() {
-        if (gif != null) return gif.height;
-        if (video != null && video.isReady()) return video.height();
-        return 1;
-    }
-
     public boolean isExpired() {
-        if (startTime == -1) return false; // Aún cargando
+        if (startTime == -1) return false;
+        if (maxLoops != -1 && gif != null && gif.duration > 0) {
+            if ((System.currentTimeMillis() - startTime) / gif.duration >= maxLoops) return true;
+        }
         if (endTime != -1 && System.currentTimeMillis() > endTime) return true;
         return video != null && video.isEnded();
     }
 
-    public void release() {
-        if (gif != null) gif.release();
-        if (video != null) { video.stop(); video.release(); }
-    }
+    public int getWidth() { return gif != null ? gif.width : (video != null ? video.width() : 1); }
+    public int getHeight() { return gif != null ? gif.height : (video != null ? video.height() : 1); }
+    public void release() { if (gif != null) gif.release(); if (video != null) { video.stop(); video.release(); } }
 }
