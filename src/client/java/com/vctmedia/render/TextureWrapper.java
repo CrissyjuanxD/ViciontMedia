@@ -14,7 +14,6 @@ import java.io.File;
 
 public class TextureWrapper {
     public final String url;
-    // Campos mutables para permitir vctedit
     public long duration;
     public int x, y, size;
     public boolean isOverlay;
@@ -35,6 +34,17 @@ public class TextureWrapper {
         this.size = size;
         this.isOverlay = isOverlay;
         updateLoopLogic(duration);
+    }
+
+    // Método para clonar un precargado
+    public TextureWrapper createActiveCopy(long duration, int x, int y, int size, boolean isOverlay) {
+        TextureWrapper copy = new TextureWrapper(this.url, duration, x, y, size, isOverlay);
+        copy.gif = this.gif; // Comparten la textura ya cargada
+        copy.video = this.video;
+        copy.startTime = System.currentTimeMillis();
+        copy.loading = false;
+        copy.updateLoopLogic(duration);
+        return copy;
     }
 
     public void updateLoopLogic(long newDuration) {
@@ -92,10 +102,7 @@ public class TextureWrapper {
         }
         if (gif != null) {
             long time = System.currentTimeMillis() - startTime;
-            // CORRECCIÓN GIF: Si es bucle o quedan vueltas, usamos el módulo para reiniciar el frame
-            if (gif.duration > 0) {
-                time = time % gif.duration;
-            }
+            if (gif.duration > 0) time = time % gif.duration;
             return gif.texture(time);
         }
         if (video != null && video.isReady()) return video.texture();
@@ -113,5 +120,11 @@ public class TextureWrapper {
 
     public int getWidth() { return gif != null ? gif.width : (video != null ? video.width() : 1); }
     public int getHeight() { return gif != null ? gif.height : (video != null ? video.height() : 1); }
-    public void release() { if (gif != null) gif.release(); if (video != null) { video.stop(); video.release(); } }
+
+    public void release() {
+        // Solo limpiamos referencias en las copias.
+        // WaterMedia liberará la memoria al cerrar el juego o si el Garbage Collector lo requiere.
+        this.gif = null;
+        this.video = null;
+    }
 }

@@ -7,6 +7,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.vctmedia.network.ViciontPayload;
 import com.vctmedia.render.MediaOverlay;
 import com.vctmedia.util.MediaOrchestrator;
+import com.vctmedia.util.MediaRegistry;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -27,6 +28,8 @@ public class ViciontMediaClient implements ClientModInitializer {
         if (!Files.exists(MEDIA_DIR)) {
             try { Files.createDirectories(MEDIA_DIR); } catch (Exception e) { e.printStackTrace(); }
         }
+
+        MediaRegistry.initPreload();
 
         // Registro de red (Sigue igual, es correcto)
         PayloadTypeRegistry.playS2C().register(ViciontPayload.ID, ViciontPayload.CODEC);
