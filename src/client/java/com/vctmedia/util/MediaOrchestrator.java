@@ -12,12 +12,18 @@ public class MediaOrchestrator {
         if (preloadedMedias.stream().anyMatch(m -> m.url.equals(fileName))) return;
 
         // Creamos el "molde" original
-        TextureWrapper media = new TextureWrapper(fileName, -1, 0, 0, 0, true);
+        TextureWrapper media = new TextureWrapper(fileName, null, -1, 0, 0, 0, true);
         media.loadAsync();
         preloadedMedias.add(media);
     }
 
-    public static void process(String url, long duration, int x, int y, int size, boolean isOverlay) {
+    public static void process(String url, String soundId, long duration, int x, int y, int size, boolean isOverlay) {
+        // Lógica de reinicio de volumen a 70%
+        boolean hasVideoActive = activeMedias.stream().anyMatch(m -> m.video != null);
+        if (!hasVideoActive && !url.toLowerCase().matches(".*\\.(gif|png|jpg|jpeg)$")) {
+            VolumeManager.setVolume(70);
+        }
+
         if (!isOverlay) {
             activeMedias.removeIf(m -> {
                 if (!m.isOverlay) { m.release(); return true; }
@@ -25,19 +31,15 @@ public class MediaOrchestrator {
             });
         }
 
-        // Buscar en los moldes precargados
         TextureWrapper template = preloadedMedias.stream()
                 .filter(m -> m.url.equals(url))
-                .findFirst()
-                .orElse(null);
+                .findFirst().orElse(null);
 
         if (template != null) {
-            // Clonamos el molde para que el original siga disponible e instantáneo
-            TextureWrapper activeCopy = template.createActiveCopy(duration, x, y, size, isOverlay);
-            activeMedias.add(activeCopy);
+            TextureWrapper copy = template.createActiveCopy(soundId, duration, x, y, size, isOverlay);
+            activeMedias.add(copy);
         } else {
-            // Carga normal para links de internet o videos no precargados
-            TextureWrapper media = new TextureWrapper(url, duration, x, y, size, isOverlay);
+            TextureWrapper media = new TextureWrapper(url, soundId, duration, x, y, size, isOverlay);
             media.loadAsync();
             activeMedias.add(media);
         }

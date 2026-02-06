@@ -1,12 +1,19 @@
 package com.vctmedia.render;
 
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.sound.PositionedSoundInstance;
+import net.minecraft.registry.Registries;
+import net.minecraft.util.math.random.Random;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvent;
+import net.minecraft.util.Identifier;
 import org.watermedia.api.image.ImageAPI;
 import org.watermedia.api.image.ImageCache;
 import org.watermedia.api.image.ImageRenderer;
 import org.watermedia.api.player.videolan.VideoPlayer;
 import org.watermedia.core.tools.IOTool;
 import com.vctmedia.ViciontMediaClient;
+import com.vctmedia.util.VolumeManager;
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 import javax.imageio.ImageIO;
@@ -14,20 +21,22 @@ import java.io.File;
 
 public class TextureWrapper {
     public final String url;
+    public String soundId;
     public long duration;
     public int x, y, size;
     public boolean isOverlay;
 
     private ImageRenderer gif;
-    private VideoPlayer video;
+    public VideoPlayer video;
     private ImageCache cache;
     private long endTime = -1;
     private long startTime = -1;
     private int maxLoops = -1;
     private boolean loading = false;
 
-    public TextureWrapper(String url, long duration, int x, int y, int size, boolean isOverlay) {
+    public TextureWrapper(String url, String soundId, long duration, int x, int y, int size, boolean isOverlay) {
         this.url = url;
+        this.soundId = soundId;
         this.duration = duration;
         this.x = x;
         this.y = y;
@@ -36,29 +45,29 @@ public class TextureWrapper {
         updateLoopLogic(duration);
     }
 
-    // Método para clonar un precargado
-    public TextureWrapper createActiveCopy(long duration, int x, int y, int size, boolean isOverlay) {
-        TextureWrapper copy = new TextureWrapper(this.url, duration, x, y, size, isOverlay);
-        copy.gif = this.gif; // Comparten la textura ya cargada
-        copy.video = this.video;
-        copy.startTime = System.currentTimeMillis();
-        copy.loading = false;
-        copy.updateLoopLogic(duration);
+    // Añadimos el parámetro newSoundId
+    public TextureWrapper createActiveCopy(String newSoundId, long duration, int x, int y, int size, boolean isOverlay) {
+        // Pasamos newSoundId al constructor en lugar de this.soundId (que podría ser null)
+        TextureWrapper copy = new TextureWrapper(this.url, newSoundId, duration, x, y, size, isOverlay);
+
+        if (this.gif != null) {
+            copy.gif = this.gif;
+            copy.startTime = System.currentTimeMillis();
+            copy.updateLoopLogic(duration);
+
+            // Ahora sí, al reproducir, copy.soundId ya tiene el valor correcto
+            copy.playMcSound();
+        } else {
+            copy.loadAsync();
+        }
+
         return copy;
     }
 
     public void updateLoopLogic(long newDuration) {
         this.duration = newDuration;
-        if (newDuration > 0 && newDuration < 1000) {
-            this.maxLoops = (int) newDuration;
-            this.endTime = -1;
-        } else if (newDuration >= 1000) {
-            this.maxLoops = -1;
-            if (startTime != -1) this.endTime = startTime + newDuration;
-        } else {
-            this.maxLoops = -1;
-            this.endTime = -1;
-        }
+        if (newDuration > 0 && newDuration < 1000) this.maxLoops = (int) newDuration;
+        else if (newDuration >= 1000 && startTime != -1) this.endTime = startTime + newDuration;
     }
 
     public void loadAsync() {
@@ -87,21 +96,63 @@ public class TextureWrapper {
                     MinecraftClient.getInstance().execute(() -> {
                         this.video = new VideoPlayer(MinecraftClient.getInstance());
                         this.video.start(url.startsWith("http") ? URI.create(url) : ViciontMediaClient.MEDIA_DIR.resolve(url).toUri());
+                        this.video.setVolume(VolumeManager.getVolume());
                     });
                 }
+                playMcSound();
                 this.startTime = System.currentTimeMillis();
                 if (duration >= 1000) this.endTime = startTime + duration;
             } catch (Exception e) { e.printStackTrace(); }
         });
     }
 
+    private void playMcSound() {
+        if (soundId == null || soundId.trim().isEmpty()) return;
+
+        MinecraftClient.getInstance().execute(() -> {
+            try {
+                System.out.println("[ViciontMedia-DEBUG] Intentando reproducir ID: " + soundId); // LOG 1
+
+                Identifier id = Identifier.tryParse(soundId);
+                if (id == null) {
+                    System.err.println("[ViciontMedia-ERROR] ID de sonido invalido: " + soundId);
+                    return;
+                }
+
+                // Usamos SoundEvent.of directamente.
+                // Registries.SOUND_EVENT.get puede fallar con sonidos de resource packs no registrados en código.
+                SoundEvent soundEvent = SoundEvent.of(id);
+
+                // --- REWORK CRITICO ---
+                // Forzamos el uso de MASTER y sonido global (sin posición) temporalmente.
+                // Esto descarta problemas de distancia, coordenadas erróneas o categorías de sonido (Jugadores/Bloques) silenciadas.
+                // Usamos pitch 1.0 y volumen 2.0 (saturado para asegurar que se escuche si está bajo)
+
+                PositionedSoundInstance soundInstance = PositionedSoundInstance.master(soundEvent, 1.0f, 2.0f);
+
+                if (MinecraftClient.getInstance().getSoundManager().isPlaying(soundInstance)) {
+                    System.out.println("[ViciontMedia-DEBUG] El sonido ya se está reproduciendo (spam?)");
+                }
+
+                MinecraftClient.getInstance().getSoundManager().play(soundInstance);
+                System.out.println("[ViciontMedia-DEBUG] Orden enviada al SoundManager para: " + id); // LOG 2
+
+            } catch (Exception e) {
+                System.err.println("[ViciontMedia-ERROR] Excepcion al reproducir: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
+    }
     public int getGlId(float partialTick) {
         if (cache != null && cache.getStatus() == ImageCache.Status.READY) {
             this.gif = cache.getRenderer();
             this.cache = null;
         }
+        if (video != null) video.setVolume(VolumeManager.getVolume());
         if (gif != null) {
-            long time = System.currentTimeMillis() - startTime;
+            // Si startTime es -1 (error de carga), usamos el tiempo actual para evitar crashes matemáticos
+            long effectiveStart = (startTime == -1) ? System.currentTimeMillis() : startTime;
+            long time = System.currentTimeMillis() - effectiveStart;
             if (gif.duration > 0) time = time % gif.duration;
             return gif.texture(time);
         }
@@ -120,11 +171,11 @@ public class TextureWrapper {
 
     public int getWidth() { return gif != null ? gif.width : (video != null ? video.width() : 1); }
     public int getHeight() { return gif != null ? gif.height : (video != null ? video.height() : 1); }
-
     public void release() {
-        // Solo limpiamos referencias en las copias.
-        // WaterMedia liberará la memoria al cerrar el juego o si el Garbage Collector lo requiere.
+        if (this.video != null) {
+            this.video.release();
+            this.video = null;
+        }
         this.gif = null;
-        this.video = null;
     }
 }

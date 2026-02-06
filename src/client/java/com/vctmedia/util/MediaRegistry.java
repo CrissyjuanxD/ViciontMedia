@@ -19,7 +19,7 @@ public class MediaRegistry {
         for (File file : files) {
             if (file.isFile()) {
                 String name = file.getName().toLowerCase();
-                // Solo precargamos si es una imagen/gif
+
                 if (IMAGE_EXTENSIONS.stream().anyMatch(name::endsWith)) {
                     MediaOrchestrator.preload(file.getName());
                 }
