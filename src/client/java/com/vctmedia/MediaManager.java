@@ -1,4 +1,8 @@
 /*
+
+ESTA CLASE ESTA COMENTADA PORQUE ERA PROBLEMATICA, ASI QUE FUE REWORKEADA A MediaOrchestrator
+tengo que norrar esta clase sjaksajs en un futuro.
+
 package com.vctmedia;
 
 import com.vctmedia.render.TextureWrapper;
@@ -44,7 +48,7 @@ public class MediaManager {
                     }
                 } else {
                     client.execute(() -> {
-                        VideoPlayer v = new VideoPlayer(client); // Usa factory por defecto
+                        VideoPlayer v = new VideoPlayer(client);
                         v.start(pathOrUrl.startsWith("http") ? URI.create(pathOrUrl) : ViciontMediaClient.MEDIA_DIR.resolve(pathOrUrl).toUri());
                         wrapper.setVideo(v);
                         startTime = System.currentTimeMillis();
@@ -79,7 +83,7 @@ public class MediaManager {
         if (!isInfinite && startTime > 0) {
             if (playbackEndTime > 0 && System.currentTimeMillis() > playbackEndTime) { stop(); return null; }
             if (gifRepetitions > 0 && (System.currentTimeMillis() - startTime) >= (wrapper.getHeight() > 0 ? 5000 : 0)) { // Ejemplo simplificado
-                // Aquí podrías usar la duración real del GIF desde el wrapper
+
             }
         }
         return wrapper;

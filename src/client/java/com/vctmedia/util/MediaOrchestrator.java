@@ -11,7 +11,6 @@ public class MediaOrchestrator {
     public static void preload(String fileName) {
         if (preloadedMedias.stream().anyMatch(m -> m.url.equals(fileName))) return;
 
-        // Creamos el "molde" original
         TextureWrapper media = new TextureWrapper(fileName, null, -1, 0, 0, 0, true);
         media.loadAsync();
         preloadedMedias.add(media);

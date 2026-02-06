@@ -80,13 +80,10 @@ public class ViciontMediaClient implements ClientModInitializer {
                                                                         String soundId = null;
                                                                         String url = rawArgs;
 
-                                                                        // NUEVA LÓGICA DE DETECCIÓN (Más simple y robusta)
                                                                         if (rawArgs.contains(" ")) {
                                                                             String[] parts = rawArgs.split(" ", 2);
                                                                             String firstPart = parts[0];
 
-                                                                            // Si la primera parte NO es http Y NO tiene extensión de archivo conocida...
-                                                                            // Asumimos que ES UN SONIDO.
                                                                             boolean looksLikeUrlOrFile = firstPart.startsWith("http")
                                                                                     || firstPart.endsWith(".png")
                                                                                     || firstPart.endsWith(".jpg")

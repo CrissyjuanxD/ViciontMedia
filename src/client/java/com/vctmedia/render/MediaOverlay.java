@@ -10,7 +10,6 @@ import net.minecraft.client.util.Window;
 import org.joml.Matrix4f;
 
 public class MediaOverlay {
-    // Usamos 1080p como altura de referencia estándar (Lógica tipo Owleaf/Badlion)
     private static final float REFERENCE_HEIGHT = 1080.0f;
 
     public static void render(DrawContext context, RenderTickCounter tickCounter) {
@@ -37,10 +36,9 @@ public class MediaOverlay {
 
                 context.getMatrices().push();
 
-                // Deshacemos la escala de la GUI de Minecraft para trabajar en píxeles reales
                 context.getMatrices().scale(1.0f / guiScale, 1.0f / guiScale, 1.0f);
 
-                // Aplicamos nuestra escala normalizada basada en 1080p
+                // escala normalizada basada en 1080p
                 context.getMatrices().scale(normalizationScale, normalizationScale, 1.0f);
 
                 int x, y, width, height;

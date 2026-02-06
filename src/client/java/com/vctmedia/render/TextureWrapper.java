@@ -45,9 +45,8 @@ public class TextureWrapper {
         updateLoopLogic(duration);
     }
 
-    // Añadimos el parámetro newSoundId
+
     public TextureWrapper createActiveCopy(String newSoundId, long duration, int x, int y, int size, boolean isOverlay) {
-        // Pasamos newSoundId al constructor en lugar de this.soundId (que podría ser null)
         TextureWrapper copy = new TextureWrapper(this.url, newSoundId, duration, x, y, size, isOverlay);
 
         if (this.gif != null) {
@@ -55,7 +54,6 @@ public class TextureWrapper {
             copy.startTime = System.currentTimeMillis();
             copy.updateLoopLogic(duration);
 
-            // Ahora sí, al reproducir, copy.soundId ya tiene el valor correcto
             copy.playMcSound();
         } else {
             copy.loadAsync();
@@ -111,7 +109,7 @@ public class TextureWrapper {
 
         MinecraftClient.getInstance().execute(() -> {
             try {
-                System.out.println("[ViciontMedia-DEBUG] Intentando reproducir ID: " + soundId); // LOG 1
+                System.out.println("[ViciontMedia-DEBUG] Intentando reproducir ID: " + soundId);
 
                 Identifier id = Identifier.tryParse(soundId);
                 if (id == null) {
@@ -119,14 +117,11 @@ public class TextureWrapper {
                     return;
                 }
 
-                // Usamos SoundEvent.of directamente.
-                // Registries.SOUND_EVENT.get puede fallar con sonidos de resource packs no registrados en código.
                 SoundEvent soundEvent = SoundEvent.of(id);
 
                 // --- REWORK CRITICO ---
                 // Forzamos el uso de MASTER y sonido global (sin posición) temporalmente.
-                // Esto descarta problemas de distancia, coordenadas erróneas o categorías de sonido (Jugadores/Bloques) silenciadas.
-                // Usamos pitch 1.0 y volumen 2.0 (saturado para asegurar que se escuche si está bajo)
+                // Esto descarta problemas de distancia
 
                 PositionedSoundInstance soundInstance = PositionedSoundInstance.master(soundEvent, 1.0f, 2.0f);
 
@@ -135,7 +130,7 @@ public class TextureWrapper {
                 }
 
                 MinecraftClient.getInstance().getSoundManager().play(soundInstance);
-                System.out.println("[ViciontMedia-DEBUG] Orden enviada al SoundManager para: " + id); // LOG 2
+                System.out.println("[ViciontMedia-DEBUG] Orden enviada al SoundManager para: " + id);
 
             } catch (Exception e) {
                 System.err.println("[ViciontMedia-ERROR] Excepcion al reproducir: " + e.getMessage());
@@ -150,7 +145,7 @@ public class TextureWrapper {
         }
         if (video != null) video.setVolume(VolumeManager.getVolume());
         if (gif != null) {
-            // Si startTime es -1 (error de carga), usamos el tiempo actual para evitar crashes matemáticos
+
             long effectiveStart = (startTime == -1) ? System.currentTimeMillis() : startTime;
             long time = System.currentTimeMillis() - effectiveStart;
             if (gif.duration > 0) time = time % gif.duration;

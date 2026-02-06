@@ -6,7 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public class MediaRegistry {
-    // Solo extensiones de imagen para evitar saturar RAM con videos
+    //logica para precargar archivos, no video para ahorrar memria
     private static final List<String> IMAGE_EXTENSIONS = Arrays.asList(".gif", ".png", ".jpg", ".jpeg");
 
     public static void initPreload() {

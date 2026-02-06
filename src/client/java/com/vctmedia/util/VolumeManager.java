@@ -24,26 +24,22 @@ public class VolumeManager {
             MinecraftClient client = MinecraftClient.getInstance();
             Window window = client.getWindow();
 
-            // Trabajamos en píxeles reales primero para posicionar
             float scaleFactor = (float) window.getScaleFactor();
             float screenWidth = window.getFramebufferWidth();
             float screenHeight = window.getFramebufferHeight();
 
-            // Queremos el texto al 1.5x de tamaño
             float textScale = 1.5f;
 
             context.getMatrices().push();
 
-            // 1. Resetear escala a píxeles reales (ignorando GUI Scale)
             context.getMatrices().scale(1.0f / scaleFactor, 1.0f / scaleFactor, 1.0f);
 
-            // 2. Aplicar nuestra escala personalizada (1.5x)
             context.getMatrices().scale(textScale, textScale, 1.0f);
 
             float textWidth = client.textRenderer.getWidth(text);
             float textHeight = client.textRenderer.fontHeight;
 
-            // Calculamos posición: (AnchoReal / EscalaTexto) - AnchoTexto - Margen
+            // Calculp posción (AnchoReal / EscalaTexto) - AnchoTexto - Margen
             float x = (screenWidth / textScale) - textWidth - 10;
             float y = (screenHeight / textScale) - textHeight - 10;
 
