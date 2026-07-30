@@ -1,5 +1,17 @@
 package com.vctmedia.util;
 
+/*
+ * GifPreCache — DESACTIVADO en WaterMedia v3.
+ *
+ * En v2 esto era necesario porque los GIFs se decodificaban completos en RAM
+ * antes de mostrarse, y la pre-carga evitaba el retardo inicial. Con v3,
+ * TxMediaPlayer decodifica los fotogramas bajo demanda (streaming), por lo que
+ * el primer fotograma aparece casi instantaneamente sin necesidad de pre-cargar.
+ *
+ * Se mantiene el codigo comentado por si en el futuro se quiere reactivar
+ * para casos especificos (ej. GIFs muy grandes en red lenta).
+ */
+
 import com.vctmedia.ViciontMediaClient;
 import org.watermedia.api.media.MediaAPI;
 import org.watermedia.api.media.MRL;
@@ -14,6 +26,8 @@ public class GifPreCache {
     private static boolean initialized = false;
 
     public static void init() {
+        // DESACTIVADO en v3 — la decodificacion bajo demanda hace innecesaria la pre-carga.
+        /*
         if (initialized) return;
         initialized = true;
 
@@ -49,6 +63,7 @@ public class GifPreCache {
 
         thread.setDaemon(true);
         thread.start();
+        */
     }
 
     public static MRL get(String filename) {

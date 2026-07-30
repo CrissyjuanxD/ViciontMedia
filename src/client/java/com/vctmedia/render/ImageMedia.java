@@ -13,6 +13,8 @@ import java.util.concurrent.CompletableFuture;
 public class ImageMedia extends AbstractMedia {
     private MediaPlayer player;
     private MRL mrl;
+    private int loopCount = 0;
+    private long lastTime = -1;
 
     public ImageMedia(String url, String soundId, long duration, int size, String pos, int opacity, boolean isOverlay, boolean useFade) {
         super(url, soundId, duration, size, pos, opacity, isOverlay, useFade);
@@ -35,7 +37,7 @@ public class ImageMedia extends AbstractMedia {
 
                 mrl = MediaAPI.mrl(uri);
 
-                mrl.subscribe(loaded -> MinecraftClient.getInstance().execute(() -> createPlayer()));
+                mrl.subscribe(loaded -> MinecraftClient.getInstance().execute(this::createPlayer));
 
                 this.startTime = System.currentTimeMillis();
                 if (duration >= 1000) this.endTime = startTime + duration;
@@ -55,7 +57,8 @@ public class ImageMedia extends AbstractMedia {
                     () -> null);
 
             if (player != null) {
-                player.repeat(true);
+                boolean shouldRepeat = (maxLoops == -1 || maxLoops > 1);
+                player.repeat(shouldRepeat);
                 player.start();
                 playMcSound();
             }
@@ -79,6 +82,17 @@ public class ImageMedia extends AbstractMedia {
         }
 
         if (player != null && player.withVideo()) {
+            if (maxLoops > 1) {
+                long currentTime = player.time();
+                if (lastTime > 0 && currentTime < lastTime) {
+                    loopCount++;
+                    if (loopCount >= maxLoops - 1) {
+                        player.repeat(false);
+                    }
+                }
+                lastTime = currentTime;
+            }
+
             long tex = player.texture();
             return tex > 0 ? (int) tex : -1;
         }

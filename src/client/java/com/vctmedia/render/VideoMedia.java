@@ -14,6 +14,7 @@ import java.util.concurrent.CompletableFuture;
 public class VideoMedia extends AbstractMedia {
     public MediaPlayer player;
     private MRL mrl;
+    private int lastVolume = -1;
 
     public VideoMedia(String url, String soundId, long duration, int size, String pos, int opacity, boolean isOverlay, boolean useFade) {
         super(url, soundId, duration, size, pos, opacity, isOverlay, useFade);
@@ -36,7 +37,7 @@ public class VideoMedia extends AbstractMedia {
 
                 mrl = MediaAPI.mrl(uri);
 
-                mrl.subscribe(loaded -> MinecraftClient.getInstance().execute(() -> createPlayer()));
+                mrl.subscribe(loaded -> MinecraftClient.getInstance().execute(this::createPlayer));
 
                 this.startTime = System.currentTimeMillis();
                 if (duration >= 1000) this.endTime = startTime + duration;
@@ -57,6 +58,7 @@ public class VideoMedia extends AbstractMedia {
 
             if (player != null) {
                 player.volume(VolumeManager.getVolume());
+                lastVolume = VolumeManager.getVolume();
                 player.start();
                 playMcSound();
             }
@@ -85,7 +87,12 @@ public class VideoMedia extends AbstractMedia {
         }
 
         if (player != null && player.withVideo()) {
-            player.volume(VolumeManager.getVolume());
+            int currentVol = VolumeManager.getVolume();
+            if (currentVol != lastVolume) {
+                player.volume(currentVol);
+                lastVolume = currentVol;
+            }
+
             long tex = player.texture();
             return tex > 0 ? (int) tex : -1;
         }
