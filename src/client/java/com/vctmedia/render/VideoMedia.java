@@ -4,6 +4,7 @@ import com.vctmedia.ViciontMediaClient;
 import com.vctmedia.util.FadeManager;
 import com.vctmedia.util.VolumeManager;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.text.Text;
 import org.watermedia.api.media.MediaAPI;
 import org.watermedia.api.media.MRL;
 import org.watermedia.api.media.players.MediaPlayer;
@@ -15,6 +16,15 @@ public class VideoMedia extends AbstractMedia {
     public MediaPlayer player;
     private MRL mrl;
     private int lastVolume = -1;
+
+    private int cachedWidth = -1;
+    private int cachedHeight = -1;
+    private int cachedTexture = -1;
+    private long lastTexturePollMs = 0;
+    private static final long TEXTURE_POLL_INTERVAL_MS = 33;
+    private boolean loadFailed = false;
+    private long loadStartTime = 0;
+    private static final long LOAD_TIMEOUT_MS = 20000;
 
     public VideoMedia(String url, String soundId, long duration, int size, String pos, int opacity, boolean isOverlay, boolean useFade) {
         super(url, soundId, duration, size, pos, opacity, isOverlay, useFade);
@@ -35,13 +45,24 @@ public class VideoMedia extends AbstractMedia {
                         ? URI.create(url)
                         : ViciontMediaClient.MEDIA_DIR.resolve(url).toUri();
 
+                loadStartTime = System.currentTimeMillis();
                 mrl = MediaAPI.mrl(uri);
+
+                if (mrl == null) {
+                    loadFailed = true;
+                    notifyError("No se pudo abrir el video (MRL nulo): " + url);
+                    return;
+                }
 
                 mrl.subscribe(loaded -> MinecraftClient.getInstance().execute(this::createPlayer));
 
                 this.startTime = System.currentTimeMillis();
                 if (duration >= 1000) this.endTime = startTime + duration;
-            } catch (Exception e) { e.printStackTrace(); }
+            } catch (Exception e) {
+                loadFailed = true;
+                notifyError("Error al cargar video: " + e.getMessage());
+                e.printStackTrace();
+            }
         });
     }
 
@@ -61,15 +82,30 @@ public class VideoMedia extends AbstractMedia {
                 lastVolume = VolumeManager.getVolume();
                 player.start();
                 playMcSound();
+            } else {
+                loadFailed = true;
+                notifyError("MediaPlayer no pudo ser creado: " + url);
             }
         } catch (Exception e) {
+            loadFailed = true;
+            notifyError("Error al crear player de video: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    private void notifyError(String msg) {
+        MinecraftClient.getInstance().execute(() -> {
+            if (MinecraftClient.getInstance().player != null) {
+                MinecraftClient.getInstance().player.sendMessage(Text.literal("§c[ViciontMedia] §f" + msg));
+            }
+            System.err.println("[ViciontMedia] " + msg);
+        });
     }
 
     @Override
     public int getGlId(float partialTick) {
         if (released) return -1;
+        if (loadFailed) return -1;
 
         if (useFade && size <= 0 && !triggeredEndFade) {
             long remaining = -1;
@@ -80,7 +116,7 @@ public class VideoMedia extends AbstractMedia {
                 remaining = endTime - System.currentTimeMillis();
             }
 
-            if (remaining != -1 && remaining <= FadeManager.FADE_IN + (FadeManager.FADE_STAY / 2)) {
+            if (remaining != -1 && remaining <= FadeManager.END_FADE_IN + (FadeManager.END_FADE_STAY / 2)) {
                 FadeManager.triggerEndFadeNow();
                 triggeredEndFade = true;
             }
@@ -93,24 +129,49 @@ public class VideoMedia extends AbstractMedia {
                 lastVolume = currentVol;
             }
 
-            long tex = player.texture();
-            return tex > 0 ? (int) tex : -1;
+            long now = System.currentTimeMillis();
+            if (now - lastTexturePollMs >= TEXTURE_POLL_INTERVAL_MS) {
+                lastTexturePollMs = now;
+                long tex = player.texture();
+                if (tex > 0) cachedTexture = (int) tex;
+            }
+            return cachedTexture;
         }
         return -1;
     }
 
     @Override
     public int getWidth() {
-        return player != null ? player.width() : 1;
+        if (cachedWidth > 0) return cachedWidth;
+        if (player != null) {
+            int w = player.width();
+            if (w > 0) cachedWidth = w;
+            return w > 0 ? w : 1;
+        }
+        return 1;
     }
 
     @Override
     public int getHeight() {
-        return player != null ? player.height() : 1;
+        if (cachedHeight > 0) return cachedHeight;
+        if (player != null) {
+            int h = player.height();
+            if (h > 0) cachedHeight = h;
+            return h > 0 ? h : 1;
+        }
+        return 1;
     }
 
     @Override
     protected boolean checkSpecificExpired() {
+        if (loadFailed) return true;
+        if (mrl != null && !mrl.status().loaded() && startTime == -1) {
+            if (System.currentTimeMillis() - loadStartTime > LOAD_TIMEOUT_MS) {
+                loadFailed = true;
+                notifyError("Timeout al cargar el video (20s): " + url);
+                return true;
+            }
+        }
         return player != null && player.ended();
     }
 

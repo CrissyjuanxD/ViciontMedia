@@ -2,6 +2,7 @@ package com.vctmedia.mixin.client;
 
 import com.vctmedia.render.MediaOverlay;
 import com.vctmedia.render.TextOverlayRenderer;
+import com.vctmedia.render.FadeRenderer;
 import com.vctmedia.util.FadeManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -60,23 +61,11 @@ public abstract class InGameHudMixin {
 		MediaOverlay.render(context, tickCounter);
 		TextOverlayRenderer.render(context, tickCounter);
 
-		// 2. Dibuja el Fade (pantalla negra) por encima del video
+		// 2. Dibuja el Fade (pantalla negra) por encima del video Y del HUD
 		if (FadeManager.isFading) {
 			float alpha = FadeManager.getFadeAlpha();
 			if (alpha > 0.0f) {
-				com.mojang.blaze3d.systems.RenderSystem.enableBlend();
-				com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
-
-				// Desactivamos DepthTest para que la pantalla negra cubra TODO
-				com.mojang.blaze3d.systems.RenderSystem.disableDepthTest();
-				com.mojang.blaze3d.systems.RenderSystem.depthMask(false);
-
-				int color = ((int) (alpha * 255.0f) << 24) | 0x000000;
-				context.fill(0, 0, client.getWindow().getScaledWidth(), client.getWindow().getScaledHeight(), color);
-
-				com.mojang.blaze3d.systems.RenderSystem.depthMask(true);
-				com.mojang.blaze3d.systems.RenderSystem.enableDepthTest();
-				com.mojang.blaze3d.systems.RenderSystem.disableBlend();
+				FadeRenderer.render(context, client, alpha);
 			}
 		}
 	}

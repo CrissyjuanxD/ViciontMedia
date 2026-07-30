@@ -35,5 +35,9 @@
 		"java": ">=21",
 		"fabric-api": "*",
 		"watermedia": ">=3.0.0"
+	},
+	"suggests": {
+		"watermedia_pe": "*",
+		"watermedia_yt_plugin": "*"
 	}
 }

@@ -53,7 +53,7 @@ public abstract class AbstractMedia {
                 FadeManager.triggerEndFadeNow();
                 triggeredEndFade = true;
             }
-            long expireTime = System.currentTimeMillis() + FadeManager.FADE_IN + (FadeManager.FADE_STAY / 2);
+            long expireTime = System.currentTimeMillis() + FadeManager.END_FADE_IN + (FadeManager.END_FADE_STAY / 2);
             if (endTime == -1 || endTime > expireTime) {
                 endTime = expireTime;
             }
