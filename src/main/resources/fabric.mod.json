@@ -37,7 +37,7 @@
 		"watermedia": ">=3.0.0"
 	},
 	"suggests": {
-		"watermedia_pe": "*",
-		"watermedia_yt_plugin": "*"
+		"watermedia_youtube_extension": "*",
+		"watermedia_pe": "*"
 	}
 }

@@ -6,20 +6,31 @@ public class FadeManager {
     public static long fadeEndFadeStartMs = -1;
     public static long fadeEndTime = 0;
 
-    // Fade inicial (entrada del video): funde a negro, se mantiene 10s esperando que cargue, funde a claro
-    public static final long FADE_IN = 1400;
-    public static final long FADE_STAY = 10000;
-    public static final long FADE_OUT = 1400;
+    // Fade inicial: funde a negro rapidamente, se mantiene negro hasta que el video aparezca
+    // El fade-out (de negro a claro) se desencadena dinamicamente cuando el video esta listo
+    public static final long FADE_IN = 1200;
+    public static final long FADE_OUT = 1200;
 
     // Fade final (fin del video): funde a negro, pausa breve, funde a claro
-    public static final long END_FADE_IN = 1400;
-    public static final long END_FADE_STAY = 600;
-    public static final long END_FADE_OUT = 1400;
+    public static final long END_FADE_IN = 1200;
+    public static final long END_FADE_STAY = 400;
+    public static final long END_FADE_OUT = 1200;
+
+    // Marca el momento en que el video aparecio — desencadena el fade-out inmediatamente
+    private static long videoReadyMs = -1;
 
     public static void startFade(long duration) {
         isFading = true;
         fadeStartMs = System.currentTimeMillis();
         fadeEndFadeStartMs = -1;
+        videoReadyMs = -1;
+    }
+
+    // Llamado por los media cuando detectan que el video ya tiene textura
+    public static void notifyVideoReady() {
+        if (isFading && videoReadyMs == -1) {
+            videoReadyMs = System.currentTimeMillis();
+        }
     }
 
     public static void triggerEndFadeNow() {
@@ -59,17 +70,28 @@ public class FadeManager {
             }
         }
 
-        // FASE INICIAL (Fade In -> Stay 10s -> Fade Out claro)
+        // FASE INICIAL: Fade In (a negro) -> Stay negro -> Fade Out (a claro)
+        // El fade-out empieza cuando notifyVideoReady() es llamado
         long startFadeInEnd = fadeStartMs + FADE_IN;
-        long startStayEnd = startFadeInEnd + FADE_STAY;
-        long startFadeOutEnd = startStayEnd + FADE_OUT;
 
         if (now < startFadeInEnd) {
+            // Fase 1: fundiendo a negro
             return (float) (now - fadeStartMs) / FADE_IN;
-        } else if (now < startStayEnd) {
+        }
+
+        // Fase 2: negro completo — esperando que el video aparezca
+        if (videoReadyMs == -1) {
+            // El video todavia no aparece. Timeout de seguridad: 15s max en negro
+            if (now - startFadeInEnd > 15000) {
+                videoReadyMs = now;
+            }
             return 1.0f;
-        } else if (now < startFadeOutEnd) {
-            long elapsed = now - startStayEnd;
+        }
+
+        // Fase 3: el video aparecio — fundir de negro a claro rapidamente
+        long fadeOutEnd = videoReadyMs + FADE_OUT;
+        if (now < fadeOutEnd) {
+            long elapsed = now - videoReadyMs;
             return 1.0f - ((float) elapsed / FADE_OUT);
         }
 

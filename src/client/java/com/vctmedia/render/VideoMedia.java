@@ -20,11 +20,14 @@ public class VideoMedia extends AbstractMedia {
     private int cachedWidth = -1;
     private int cachedHeight = -1;
     private int cachedTexture = -1;
+    private Boolean cachedHasVideo = null;
     private long lastTexturePollMs = 0;
-    private static final long TEXTURE_POLL_INTERVAL_MS = 33;
     private boolean loadFailed = false;
     private long loadStartTime = 0;
     private static final long LOAD_TIMEOUT_MS = 20000;
+
+    private static final long POLL_MIN_MS = 33;
+    private static final long POLL_MAX_MS = 100;
 
     public VideoMedia(String url, String soundId, long duration, int size, String pos, int opacity, boolean isOverlay, boolean useFade) {
         super(url, soundId, duration, size, pos, opacity, isOverlay, useFade);
@@ -36,9 +39,6 @@ public class VideoMedia extends AbstractMedia {
         loading = true;
         CompletableFuture.runAsync(() -> {
             try {
-                if (useFade && size <= 0) {
-                    Thread.sleep(FadeManager.FADE_IN + (FadeManager.FADE_STAY / 2));
-                }
                 if (released) return;
 
                 URI uri = url.startsWith("http")
@@ -102,6 +102,13 @@ public class VideoMedia extends AbstractMedia {
         });
     }
 
+    private boolean hasVideo() {
+        if (cachedHasVideo != null) return cachedHasVideo;
+        if (player == null) return false;
+        cachedHasVideo = player.withVideo();
+        return cachedHasVideo;
+    }
+
     @Override
     public int getGlId(float partialTick) {
         if (released) return -1;
@@ -122,7 +129,7 @@ public class VideoMedia extends AbstractMedia {
             }
         }
 
-        if (player != null && player.withVideo()) {
+        if (player != null && hasVideo()) {
             int currentVol = VolumeManager.getVolume();
             if (currentVol != lastVolume) {
                 player.volume(currentVol);
@@ -130,10 +137,18 @@ public class VideoMedia extends AbstractMedia {
             }
 
             long now = System.currentTimeMillis();
-            if (now - lastTexturePollMs >= TEXTURE_POLL_INTERVAL_MS) {
+            long elapsed = now - lastTexturePollMs;
+            long interval = (lastTexturePollMs > 0 && elapsed > POLL_MAX_MS) ? POLL_MAX_MS : POLL_MIN_MS;
+
+            if (elapsed >= interval) {
                 lastTexturePollMs = now;
                 long tex = player.texture();
-                if (tex > 0) cachedTexture = (int) tex;
+                if (tex > 0) {
+                    cachedTexture = (int) tex;
+                    if (useFade && size <= 0) {
+                        FadeManager.notifyVideoReady();
+                    }
+                }
             }
             return cachedTexture;
         }

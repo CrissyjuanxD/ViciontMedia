@@ -20,9 +20,9 @@ public class MediaOrchestrator {
     }
 
     private static boolean isPlatformExtensionInstalled() {
-        return FabricLoader.getInstance().isModLoaded("watermedia_pe")
-                || FabricLoader.getInstance().isModLoaded("watermedia_yt_plugin")
-                || FabricLoader.getInstance().isModLoaded("platform_extension");
+        return FabricLoader.getInstance().isModLoaded("watermedia_youtube_extension")
+                || FabricLoader.getInstance().isModLoaded("watermedia_pe")
+                || FabricLoader.getInstance().isModLoaded("watermedia_yt_plugin");
     }
 
     private static void notifyPlayer(String msg) {

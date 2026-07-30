@@ -20,11 +20,15 @@ public class ImageMedia extends AbstractMedia {
     private int cachedWidth = -1;
     private int cachedHeight = -1;
     private int cachedTexture = -1;
+    private Boolean cachedHasVideo = null;
     private long lastTexturePollMs = 0;
-    private static final long TEXTURE_POLL_INTERVAL_MS = 33;
     private boolean loadFailed = false;
     private long loadStartTime = 0;
     private static final long LOAD_TIMEOUT_MS = 15000;
+
+    // Polling adaptativo: si el frame tardo mucho, dar mas tiempo antes del siguiente poll
+    private static final long POLL_MIN_MS = 33;   // ~30fps en condiciones normales
+    private static final long POLL_MAX_MS = 100;  // maximo si el frame fue pesado
 
     public ImageMedia(String url, String soundId, long duration, int size, String pos, int opacity, boolean isOverlay, boolean useFade) {
         super(url, soundId, duration, size, pos, opacity, isOverlay, useFade);
@@ -36,9 +40,6 @@ public class ImageMedia extends AbstractMedia {
         loading = true;
         CompletableFuture.runAsync(() -> {
             try {
-                if (useFade && size <= 0) {
-                    Thread.sleep(FadeManager.FADE_IN + (FadeManager.FADE_STAY / 2));
-                }
                 if (released) return;
 
                 URI uri = url.startsWith("http")
@@ -102,6 +103,13 @@ public class ImageMedia extends AbstractMedia {
         });
     }
 
+    private boolean hasVideo() {
+        if (cachedHasVideo != null) return cachedHasVideo;
+        if (player == null) return false;
+        cachedHasVideo = player.withVideo();
+        return cachedHasVideo;
+    }
+
     @Override
     public int getGlId(float partialTick) {
         if (released) return -1;
@@ -117,10 +125,17 @@ public class ImageMedia extends AbstractMedia {
             }
         }
 
-        if (player != null && player.withVideo()) {
-            if (maxLoops > 1) {
-                long now2 = System.currentTimeMillis();
-                if (now2 - lastTexturePollMs >= TEXTURE_POLL_INTERVAL_MS) {
+        if (player != null && hasVideo()) {
+            long now = System.currentTimeMillis();
+
+            // Polling adaptativo: si paso mucho tiempo desde el ultimo poll, esperar mas
+            long elapsed = now - lastTexturePollMs;
+            long interval = (lastTexturePollMs > 0 && elapsed > POLL_MAX_MS) ? POLL_MAX_MS : POLL_MIN_MS;
+
+            if (elapsed >= interval) {
+                lastTexturePollMs = now;
+
+                if (maxLoops > 1) {
                     long currentTime = player.time();
                     if (lastTime > 0 && currentTime < lastTime) {
                         loopCount++;
@@ -130,13 +145,15 @@ public class ImageMedia extends AbstractMedia {
                     }
                     lastTime = currentTime;
                 }
-            }
 
-            long now = System.currentTimeMillis();
-            if (now - lastTexturePollMs >= TEXTURE_POLL_INTERVAL_MS) {
-                lastTexturePollMs = now;
                 long tex = player.texture();
-                if (tex > 0) cachedTexture = (int) tex;
+                if (tex > 0) {
+                    cachedTexture = (int) tex;
+                    // El video aparecio — avisar al fade para que empiece a salir del negro
+                    if (useFade && size <= 0) {
+                        FadeManager.notifyVideoReady();
+                    }
+                }
             }
             return cachedTexture;
         }
