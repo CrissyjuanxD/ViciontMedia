@@ -12,7 +12,7 @@ public class MediaOrchestrator {
     public static void process(String url, String soundId, long duration, int size, String pos, int opacity, boolean isOverlay, boolean useFade) {
         String lower = url.toLowerCase();
 
-        // DE VUELTA A LA NORMALIDAD: Tratamos los GIFs como imágenes estáticas/animadas
+        // DE VUELTA A LA NORMALIDAD: Tratamos los GIFs como imágenes estáticas/animadas.
         boolean isImage = lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".gif");
 
         boolean hasVideoActive = activeMedias.stream().anyMatch(m -> m instanceof VideoMedia);
