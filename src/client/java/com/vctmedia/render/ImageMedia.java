@@ -1,21 +1,18 @@
 package com.vctmedia.render;
 
-import com.vctmedia.util.GifPreCache;
-import org.watermedia.api.image.ImageAPI;
-import org.watermedia.api.image.ImageRenderer;
-import org.watermedia.core.tools.IOTool;
-import com.mojang.blaze3d.platform.GlStateManager;
 import com.vctmedia.ViciontMediaClient;
 import com.vctmedia.util.FadeManager;
+import net.minecraft.client.MinecraftClient;
+import org.watermedia.api.media.MediaAPI;
+import org.watermedia.api.media.MRL;
+import org.watermedia.api.media.players.MediaPlayer;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.net.URL;
+import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 
 public class ImageMedia extends AbstractMedia {
-    private ImageRenderer imageRenderer;
+    private MediaPlayer player;
+    private MRL mrl;
 
     public ImageMedia(String url, String soundId, long duration, int size, String pos, int opacity, boolean isOverlay, boolean useFade) {
         super(url, soundId, duration, size, pos, opacity, isOverlay, useFade);
@@ -32,42 +29,46 @@ public class ImageMedia extends AbstractMedia {
                 }
                 if (released) return;
 
-                String lower = url.toLowerCase();
-                boolean isGif = lower.endsWith(".gif");
+                URI uri = url.startsWith("http")
+                        ? URI.create(url)
+                        : ViciontMediaClient.MEDIA_DIR.resolve(url).toUri();
 
-                if (url.startsWith("http")) {
-                    BufferedImage image = ImageIO.read(new URL(url));
-                    if (image != null && !released) {
-                        this.imageRenderer = ImageAPI.renderer(image);
-                    }
-                } else {
-                    File file = ViciontMediaClient.MEDIA_DIR.resolve(url).toFile();
-                    if (file.exists()) {
-                        if (isGif) {
-                            String filename = file.getName();
-                            ImageRenderer cached = GifPreCache.get(filename);
-                            if (cached != null) {
-                                this.imageRenderer = cached;
-                            } else {
-                                var gifData = IOTool.readGif(file.toPath().toAbsolutePath());
-                                if (gifData != null && !released) {
-                                    this.imageRenderer = ImageAPI.renderer(gifData);
-                                }
-                            }
-                        } else {
-                            BufferedImage image = ImageIO.read(file);
-                            if (image != null && !released) {
-                                this.imageRenderer = ImageAPI.renderer(image);
-                            }
-                        }
-                    }
-                }
+                mrl = MediaAPI.mrl(uri);
 
-                playMcSound();
+                MinecraftClient.getInstance().execute(() -> tryCreatePlayer());
+
                 this.startTime = System.currentTimeMillis();
                 if (duration >= 1000) this.endTime = startTime + duration;
             } catch (Exception e) { e.printStackTrace(); }
         });
+    }
+
+    private void tryCreatePlayer() {
+        if (released || player != null) return;
+
+        if (mrl == null || !mrl.status().loaded()) {
+            if (mrl != null && mrl.status().failed()) {
+                System.err.println("[VctMedia] MRL failed to load: " + url);
+                return;
+            }
+            MinecraftClient.getInstance().execute(this::tryCreatePlayer);
+            return;
+        }
+
+        try {
+            Thread renderThread = Thread.currentThread();
+            player = MediaAPI.createPlayer(mrl, 0,
+                    () -> MediaAPI.glEngine(renderThread, Runnable::run),
+                    () -> null);
+
+            if (player != null) {
+                player.repeat(true);
+                player.start();
+                playMcSound();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -84,49 +85,36 @@ public class ImageMedia extends AbstractMedia {
             }
         }
 
-        if (imageRenderer != null) {
-            long effectiveStart = (startTime == -1) ? System.currentTimeMillis() : startTime;
-            long time = System.currentTimeMillis() - effectiveStart;
-
-            if (imageRenderer.duration > 0) time = time % imageRenderer.duration;
-            return imageRenderer.texture(time);
+        if (player != null && player.withVideo()) {
+            long tex = player.texture();
+            return tex > 0 ? (int) tex : -1;
         }
         return -1;
     }
 
     @Override
-    public int getWidth() { return imageRenderer != null ? imageRenderer.width : 1; }
+    public int getWidth() {
+        return player != null ? player.width() : 1;
+    }
 
     @Override
-    public int getHeight() { return imageRenderer != null ? imageRenderer.height : 1; }
+    public int getHeight() {
+        return player != null ? player.height() : 1;
+    }
 
     @Override
     protected boolean checkSpecificExpired() {
-        if (maxLoops != -1 && imageRenderer != null && imageRenderer.duration > 0) {
-            if ((System.currentTimeMillis() - startTime) / imageRenderer.duration >= maxLoops) return true;
-        }
-        return false;
+        return player != null && player.ended();
     }
 
     @Override
     public void release() {
         this.released = true;
-        if (this.imageRenderer != null) {
+        if (this.player != null) {
             try {
-                String filename = "";
-                if (url != null && !url.startsWith("http")) {
-                    filename = new File(url).getName();
-                }
-
-                if (!filename.isEmpty() && GifPreCache.isReady(filename)) {
-                } else {
-                    if (this.imageRenderer.textures != null) {
-                        GlStateManager._deleteTextures(this.imageRenderer.textures);
-                    }
-                    this.imageRenderer.release();
-                }
+                this.player.release();
             } catch (Exception ignored) {}
-            this.imageRenderer = null;
+            this.player = null;
         }
     }
 }
