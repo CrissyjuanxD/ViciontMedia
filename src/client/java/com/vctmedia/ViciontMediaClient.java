@@ -82,6 +82,7 @@ public class ViciontMediaClient implements ClientModInitializer {
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             TextOrchestrator.clearAll();
             ShaderManager.loadShader("none");
+            GifPreCache.evictAll();
         });
 
         SuggestionProvider<FabricClientCommandSource> SOUND_SUGGESTIONS = (context, builder) -> {

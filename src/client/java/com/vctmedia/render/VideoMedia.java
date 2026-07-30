@@ -1,16 +1,19 @@
 package com.vctmedia.render;
 
-import net.minecraft.client.MinecraftClient;
-import org.watermedia.api.player.videolan.VideoPlayer;
 import com.vctmedia.ViciontMediaClient;
-import com.vctmedia.util.VolumeManager;
 import com.vctmedia.util.FadeManager;
+import com.vctmedia.util.VolumeManager;
+import net.minecraft.client.MinecraftClient;
+import org.watermedia.api.media.MediaAPI;
+import org.watermedia.api.media.MRL;
+import org.watermedia.api.media.players.MediaPlayer;
 
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 
 public class VideoMedia extends AbstractMedia {
-    public VideoPlayer video;
+    public MediaPlayer player;
+    private MRL mrl;
 
     public VideoMedia(String url, String soundId, long duration, int size, String pos, int opacity, boolean isOverlay, boolean useFade) {
         super(url, soundId, duration, size, pos, opacity, isOverlay, useFade);
@@ -27,17 +30,46 @@ public class VideoMedia extends AbstractMedia {
                 }
                 if (released) return;
 
-                MinecraftClient.getInstance().execute(() -> {
-                    this.video = new VideoPlayer(MinecraftClient.getInstance());
-                    this.video.start(url.startsWith("http") ? URI.create(url) : ViciontMediaClient.MEDIA_DIR.resolve(url).toUri());
-                    this.video.setVolume(VolumeManager.getVolume());
-                });
+                URI uri = url.startsWith("http")
+                        ? URI.create(url)
+                        : ViciontMediaClient.MEDIA_DIR.resolve(url).toUri();
 
-                playMcSound();
+                mrl = MediaAPI.mrl(uri);
+
+                MinecraftClient.getInstance().execute(this::tryCreatePlayer);
+
                 this.startTime = System.currentTimeMillis();
                 if (duration >= 1000) this.endTime = startTime + duration;
             } catch (Exception e) { e.printStackTrace(); }
         });
+    }
+
+    private void tryCreatePlayer() {
+        if (released || player != null) return;
+
+        if (mrl == null || !mrl.status().loaded()) {
+            if (mrl != null && mrl.status().failed()) {
+                System.err.println("[VctMedia] MRL failed to load: " + url);
+                return;
+            }
+            MinecraftClient.getInstance().execute(this::tryCreatePlayer);
+            return;
+        }
+
+        try {
+            Thread renderThread = Thread.currentThread();
+            player = MediaAPI.createPlayer(mrl, 0,
+                    () -> MediaAPI.glEngine(renderThread, Runnable::run),
+                    () -> MediaAPI.alEngine());
+
+            if (player != null) {
+                player.volume(VolumeManager.getVolume());
+                player.start();
+                playMcSound();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -46,9 +78,9 @@ public class VideoMedia extends AbstractMedia {
 
         if (useFade && size <= 0 && !triggeredEndFade) {
             long remaining = -1;
-            if (maxLoops == -1 && video != null) {
-                long durationMs = video.getDuration();
-                if (durationMs > 0) remaining = durationMs - video.getTime();
+            if (maxLoops == -1 && player != null) {
+                long durationMs = player.duration();
+                if (durationMs > 0) remaining = durationMs - player.time();
             } else if (endTime != -1) {
                 remaining = endTime - System.currentTimeMillis();
             }
@@ -59,30 +91,37 @@ public class VideoMedia extends AbstractMedia {
             }
         }
 
-        if (video != null) {
-            video.setVolume(VolumeManager.getVolume());
-            if (video.isReady()) return video.texture();
+        if (player != null && player.withVideo()) {
+            player.volume(VolumeManager.getVolume());
+            long tex = player.texture();
+            return tex > 0 ? (int) tex : -1;
         }
         return -1;
     }
 
     @Override
-    public int getWidth() { return video != null ? video.width() : 1; }
+    public int getWidth() {
+        return player != null ? player.width() : 1;
+    }
 
     @Override
-    public int getHeight() { return video != null ? video.height() : 1; }
+    public int getHeight() {
+        return player != null ? player.height() : 1;
+    }
 
     @Override
     protected boolean checkSpecificExpired() {
-        return video != null && video.isEnded();
+        return player != null && player.ended();
     }
 
     @Override
     public void release() {
         this.released = true;
-        if (this.video != null) {
-            this.video.release();
-            this.video = null;
+        if (this.player != null) {
+            try {
+                this.player.release();
+            } catch (Exception ignored) {}
+            this.player = null;
         }
     }
 }

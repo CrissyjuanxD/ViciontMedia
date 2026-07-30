@@ -44,7 +44,7 @@ dependencies {
 	// ---------------------------------------------------------
 	// CAMBIO 2: Aquí añadimos WaterMedia (Librería de Video)
 	// ---------------------------------------------------------
-	include(modImplementation("maven.modrinth:watermedia:2.1.37"))
+	include(modImplementation("maven.modrinth:watermedia:3.0.0.23"))
 }
 
 processResources {
