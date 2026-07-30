@@ -36,7 +36,7 @@ public class VideoMedia extends AbstractMedia {
 
                 mrl = MediaAPI.mrl(uri);
 
-                MinecraftClient.getInstance().execute(this::tryCreatePlayer);
+                mrl.subscribe(loaded -> MinecraftClient.getInstance().execute(() -> createPlayer()));
 
                 this.startTime = System.currentTimeMillis();
                 if (duration >= 1000) this.endTime = startTime + duration;
@@ -44,22 +44,15 @@ public class VideoMedia extends AbstractMedia {
         });
     }
 
-    private void tryCreatePlayer() {
+    private void createPlayer() {
         if (released || player != null) return;
-
-        if (mrl == null || !mrl.status().loaded()) {
-            if (mrl != null && mrl.status().failed()) {
-                System.err.println("[VctMedia] MRL failed to load: " + url);
-                return;
-            }
-            MinecraftClient.getInstance().execute(this::tryCreatePlayer);
-            return;
-        }
+        if (mrl == null || !mrl.status().loaded()) return;
 
         try {
             Thread renderThread = Thread.currentThread();
+            MinecraftClient mc = MinecraftClient.getInstance();
             player = MediaAPI.createPlayer(mrl, 0,
-                    () -> MediaAPI.glEngine(renderThread, Runnable::run),
+                    () -> MediaAPI.glEngine(renderThread, mc::execute),
                     () -> MediaAPI.alEngine());
 
             if (player != null) {
