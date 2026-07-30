@@ -1,0 +1,79 @@
+package com.vctmedia.util;
+
+import com.vctmedia.render.AbstractMedia;
+import com.vctmedia.render.ImageMedia;
+import com.vctmedia.render.VideoMedia;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+public class MediaOrchestrator {
+    private static final List<AbstractMedia> activeMedias = new CopyOnWriteArrayList<>();
+
+    public static void process(String url, String soundId, long duration, int size, String pos, int opacity, boolean isOverlay, boolean useFade) {
+        String lower = url.toLowerCase();
+
+        // DE VUELTA A LA NORMALIDAD: Tratamos los GIFs como imágenes estáticas/animadas
+        boolean isImage = lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".gif");
+
+        boolean hasVideoActive = activeMedias.stream().anyMatch(m -> m instanceof VideoMedia);
+        if (!hasVideoActive && isImage) {
+            VolumeManager.setVolume(70);
+        }
+
+        if (!isOverlay) {
+            for (AbstractMedia m : activeMedias) {
+                if (!m.isOverlay) {
+                    m.stopGracefully();
+                }
+            }
+        }
+
+        if (useFade && size <= 0) {
+            FadeManager.startFade(duration);
+        }
+
+        AbstractMedia media;
+        if (isImage) {
+            media = new ImageMedia(url, soundId, duration, size, pos, opacity, isOverlay, useFade);
+        } else {
+            media = new VideoMedia(url, soundId, duration, size, pos, opacity, isOverlay, useFade);
+        }
+
+        activeMedias.add(media);
+        media.loadAsync();
+    }
+
+    public static void edit(String name, long duration, int size, String pos, int opacity, boolean overlay) {
+        for (AbstractMedia m : activeMedias) {
+            if (m.url.contains(name)) {
+                m.size = size; m.pos = pos; m.opacity = opacity; m.isOverlay = overlay;
+                m.updateLoopLogic(duration);
+            }
+        }
+    }
+
+    public static void stopAll() {
+        for (AbstractMedia m : activeMedias) {
+            m.stopGracefully();
+        }
+    }
+
+    public static void stopSpecific(String name) {
+        for (AbstractMedia m : activeMedias) {
+            if (m.url.contains(name)) {
+                m.stopGracefully();
+            }
+        }
+    }
+
+    public static List<AbstractMedia> getActiveList() {
+        activeMedias.removeIf(m -> {
+            if (m.isExpired()) {
+                m.release();
+                return true;
+            }
+            return false;
+        });
+        return activeMedias;
+    }
+}

@@ -1,0 +1,16 @@
+{
+	"required": true,
+	"package": "com.vctmedia.mixin.client",
+	"compatibilityLevel": "JAVA_21",
+	"client": [
+		"InGameHudMixin",
+		"ChatHudMixin",
+		"GameRendererMixin",
+		"WindowMixin",
+		"NativeImageAccessor",
+		"PostEffectProcessorAccessor"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}
