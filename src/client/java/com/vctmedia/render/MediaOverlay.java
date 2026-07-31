@@ -51,11 +51,9 @@ public class MediaOverlay {
         if (width <= 0) width = 1;
         if (height <= 0) height = 1;
 
-        GlTextureAccessor texAccessor = (GlTextureAccessor) (Object) new Object();
-        cachedTexture = texAccessor.vctmedia$invokeConstructor(glId, "vctmedia_video",
+        cachedTexture = GlTextureAccessor.vctmedia$invokeConstructor(glId, "vctmedia_video",
                 TextureFormat.RGBA8, width, height, 1, 1, GpuTexture.USAGE_TEXTURE_BINDING);
-        GlTextureViewAccessor viewAccessor = (GlTextureViewAccessor) (Object) new Object();
-        cachedTextureView = viewAccessor.vctmedia$invokeConstructor(cachedTexture, 0, 1);
+        cachedTextureView = GlTextureViewAccessor.vctmedia$invokeConstructor(cachedTexture, 0, 1);
         cachedGlId = glId;
 
         return cachedTextureView;

@@ -9,5 +9,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 public interface GlTextureAccessor {
 
     @Invoker("<init>")
-    GlTexture vctmedia$invokeConstructor(int glId, String label, TextureFormat format, int width, int height, int depthOrLayers, int mipLevels, int usage);
+    static GlTexture vctmedia$invokeConstructor(int glId, String label, TextureFormat format, int width, int height, int depthOrLayers, int mipLevels, int usage) {
+        throw new AssertionError();
+    }
 }
