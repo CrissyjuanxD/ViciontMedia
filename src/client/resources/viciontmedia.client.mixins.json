@@ -11,7 +11,8 @@
 		"PostEffectProcessorAccessor",
 		"PostEffectPassAccessor",
 		"GlTextureAccessor",
-		"GlTextureViewAccessor"
+		"GlTextureViewAccessor",
+		"DrawContextAccessor"
 	],
 	"injectors": {
 		"defaultRequire": 1

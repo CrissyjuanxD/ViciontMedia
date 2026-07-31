@@ -5,6 +5,7 @@ import com.mojang.blaze3d.textures.AddressMode;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.TextureFormat;
+import com.vctmedia.mixin.client.DrawContextAccessor;
 import com.vctmedia.mixin.client.GlTextureAccessor;
 import com.vctmedia.mixin.client.GlTextureViewAccessor;
 import com.vctmedia.util.MediaOrchestrator;
@@ -17,7 +18,6 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.client.texture.GlTexture;
 import net.minecraft.client.texture.GlTextureView;
-import net.minecraft.client.texture.TextureSetup;
 import net.minecraft.client.util.Window;
 
 import java.util.OptionalDouble;
@@ -139,10 +139,12 @@ public class MediaOverlay {
 
                 GlTextureView textureView = getTextureView(textureId, media.getWidth(), media.getHeight());
                 GpuSampler gpuSampler = getSampler();
-                TextureSetup textureSetup = TextureSetup.of(textureView, gpuSampler);
                 RenderPipeline pipeline = RenderPipelines.GUI_TEXTURED;
 
-                context.fill(pipeline, textureSetup, (int) x, (int) y, (int) (x + width), (int) (y + height));
+                ((DrawContextAccessor) context).vctmedia$drawTexturedQuad(
+                        pipeline, textureView, gpuSampler,
+                        (int) x, (int) y, (int) (x + width), (int) (y + height),
+                        0f, 0f, 1f, 1f, color);
 
                 context.getMatrices().popMatrix();
             }

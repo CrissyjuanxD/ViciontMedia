@@ -29,6 +29,10 @@ public class ShaderManager {
             "nightv", "wobblelava", "confusion", "anim_sobel"
     );
 
+    private static final Set<String> CUSTOM_SHADERS = new HashSet<>(Arrays.asList(
+            "anim_sobel", "blood", "confusion", "green", "nightv", "wobblelava", "wobbleslow"
+    ));
+
     public static PostEffectProcessor currentShader;
     public static boolean isEnabled = false;
     public static LinkedList<String> shaderStack = new LinkedList<>();
@@ -70,7 +74,7 @@ public class ShaderManager {
             }
 
             String topShader = shaderStack.getLast();
-            Identifier shaderId = Identifier.of("minecraft", "shaders/post/" + topShader.toLowerCase() + ".json");
+            Identifier shaderId = Identifier.of("minecraft", "post_effect/" + topShader.toLowerCase() + ".json");
 
             try {
                 if (currentShader != null) {
