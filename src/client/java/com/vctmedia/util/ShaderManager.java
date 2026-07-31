@@ -1,15 +1,22 @@
 package com.vctmedia.util;
 
+import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.vctmedia.mixin.client.PostEffectPassAccessor;
+import com.vctmedia.mixin.client.PostEffectProcessorAccessor;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gl.PostEffectPass;
 import net.minecraft.client.gl.PostEffectProcessor;
 import net.minecraft.client.gl.ShaderLoader;
 import net.minecraft.util.Identifier;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class ShaderManager {
@@ -88,8 +95,37 @@ public class ShaderManager {
     }
 
     public static void updateFadeAnim() {
-        // El sistema de uniforms ha cambiado completamente en 1.21.11
-        // Los uniforms ahora se manejan via GpuBuffer, no via GlUniform.set()
-        // La animacion de fade ya no es posible con el nuevo API de la misma manera
+        if (!isEnabled || currentShader == null) return;
+
+        float fadeAlpha = FadeManager.getFadeAlpha();
+        if (fadeAlpha <= 0.0f) return;
+
+        PostEffectProcessorAccessor processorAccessor = (PostEffectProcessorAccessor) (Object) currentShader;
+        List<PostEffectPass> passes = processorAccessor.getPasses();
+
+        for (PostEffectPass pass : passes) {
+            PostEffectPassAccessor passAccessor = (PostEffectPassAccessor) (Object) pass;
+            String passId = passAccessor.getId();
+
+            if ("anim_sobel".equals(passId)) {
+                Map<String, GpuBuffer> uniformBuffers = passAccessor.getUniformBuffers();
+                GpuBuffer oldBuffer = uniformBuffers.get("Fade");
+                if (oldBuffer != null) {
+                    oldBuffer.close();
+                }
+
+                ByteBuffer data = ByteBuffer.allocateDirect(4).order(ByteOrder.nativeOrder());
+                data.putFloat(fadeAlpha);
+                data.flip();
+
+                GpuBuffer newBuffer = RenderSystem.getDevice().createBuffer(
+                        () -> "vctmedia_fade_uniform",
+                        GpuBuffer.USAGE_UNIFORM,
+                        data
+                );
+                uniformBuffers.put("Fade", newBuffer);
+                break;
+            }
+        }
     }
 }

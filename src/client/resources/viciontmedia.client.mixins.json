@@ -9,6 +9,7 @@
 		"WindowMixin",
 		"NativeImageAccessor",
 		"PostEffectProcessorAccessor",
+		"PostEffectPassAccessor",
 		"GlTextureAccessor",
 		"GlTextureViewAccessor"
 	],
