@@ -1,9 +1,10 @@
 package com.vctmedia.mixin.client;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.vctmedia.util.ShaderManager;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.render.RenderTickCounter;
+import net.minecraft.client.util.memory.ObjectAllocator;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -18,19 +19,9 @@ public abstract class GameRendererMixin {
         ShaderManager.updateFadeAnim();
 
         if (ShaderManager.isEnabled && ShaderManager.currentShader != null) {
-            // 1. Limpiamos el color base para evitar el efecto "encendido"
-            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-            RenderSystem.disableBlend();
-            RenderSystem.disableDepthTest();
-            RenderSystem.resetTextureMatrix();
-
-            // 2. Renderizamos el shader
-            ShaderManager.currentShader.render(tickCounter.getTickDelta(true));
-
-            // 3. RESTAURAMOS el estado de OpenGL para no romper la UI del juego
-            RenderSystem.enableBlend();
-            RenderSystem.defaultBlendFunc();
-            RenderSystem.enableDepthTest();
+            MinecraftClient client = MinecraftClient.getInstance();
+            ObjectAllocator allocator = ObjectAllocator.TRIVIAL;
+                ShaderManager.currentShader.render(client.getFramebuffer(), allocator);
         }
     }
 }

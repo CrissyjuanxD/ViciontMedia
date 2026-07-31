@@ -3,6 +3,7 @@ package com.vctmedia;
 import com.mojang.brigadier.arguments.*;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.vctmedia.network.ViciontPayload;
+import com.vctmedia.ViciontMedia;
 import com.vctmedia.util.*;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -19,6 +20,7 @@ import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.command.CommandSource;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 import java.nio.file.Files;
@@ -36,8 +38,9 @@ public class ViciontMediaClient implements ClientModInitializer {
             try { Files.createDirectories(MEDIA_DIR); } catch (Exception e) { e.printStackTrace(); }
         }
 
-        volumeUp = KeyBindingHelper.registerKeyBinding(new KeyBinding("Subir Volumen", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_UP, "ViciontMedia"));
-        volumeDown = KeyBindingHelper.registerKeyBinding(new KeyBinding("Bajar Volumen", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_DOWN, "ViciontMedia"));
+        KeyBinding.Category vctCategory = KeyBinding.Category.create(Identifier.of(ViciontMedia.MOD_ID, "category"));
+        volumeUp = KeyBindingHelper.registerKeyBinding(new KeyBinding("Subir Volumen", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_UP, vctCategory));
+        volumeDown = KeyBindingHelper.registerKeyBinding(new KeyBinding("Bajar Volumen", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_DOWN, vctCategory));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (volumeUp.wasPressed()) VolumeManager.changeVolume(5);

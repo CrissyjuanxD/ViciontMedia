@@ -79,7 +79,7 @@ public abstract class AbstractMedia {
                 Identifier id = Identifier.tryParse(soundId);
                 if (id != null) {
                     SoundEvent soundEvent = SoundEvent.of(id);
-                    PositionedSoundInstance soundInstance = PositionedSoundInstance.master(soundEvent, 1.0f, 2.0f);
+                    PositionedSoundInstance soundInstance = PositionedSoundInstance.ui(soundEvent, 1.0f, 2.0f);
                     MinecraftClient.getInstance().getSoundManager().play(soundInstance);
                 }
             } catch (Exception e) { e.printStackTrace(); }

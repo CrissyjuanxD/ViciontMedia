@@ -8,7 +8,9 @@
 		"GameRendererMixin",
 		"WindowMixin",
 		"NativeImageAccessor",
-		"PostEffectProcessorAccessor"
+		"PostEffectProcessorAccessor",
+		"GlTextureAccessor",
+		"GlTextureViewAccessor"
 	],
 	"injectors": {
 		"defaultRequire": 1

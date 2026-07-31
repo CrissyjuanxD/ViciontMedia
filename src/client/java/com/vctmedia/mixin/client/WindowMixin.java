@@ -1,7 +1,6 @@
 package com.vctmedia.mixin.client;
 
 import com.vctmedia.util.ShaderManager;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.util.Window;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -13,9 +12,7 @@ public class WindowMixin {
 
     @Inject(at = @At("TAIL"), method = "onFramebufferSizeChanged")
     private void updateShaderSize(CallbackInfo ci) {
-        if (ShaderManager.isEnabled && ShaderManager.currentShader != null) {
-            Window window = MinecraftClient.getInstance().getWindow();
-            ShaderManager.currentShader.setupDimensions(window.getFramebufferWidth(), window.getFramebufferHeight());
-        }
+        // PostEffectProcessor in 1.21.11 handles dimensions internally via the framebuffer
+        // No manual setupDimensions call needed anymore
     }
 }

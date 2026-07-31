@@ -28,14 +28,14 @@ public class VolumeManager {
             int screenWidthPx = window.getFramebufferWidth();
             int screenHeightPx = window.getFramebufferHeight();
 
-            context.getMatrices().push();
+            context.getMatrices().pushMatrix();
 
-            context.getMatrices().scale(1.0f / scaleFactor, 1.0f / scaleFactor, 1.0f);
+            context.getMatrices().scale(1.0f / scaleFactor, 1.0f / scaleFactor);
 
             float renderScale = screenHeightPx / 1080.0f;
 
             float finalScale = renderScale * 2.2f;
-            context.getMatrices().scale(finalScale, finalScale, 1.0f);
+            context.getMatrices().scale(finalScale, finalScale);
 
             float virtualScreenWidth = screenWidthPx / finalScale;
             float virtualScreenHeight = screenHeightPx / finalScale;
@@ -48,7 +48,7 @@ public class VolumeManager {
 
             context.drawTextWithShadow(client.textRenderer, text, (int)x, (int)y, 0xFFFFFF);
 
-            context.getMatrices().pop();
+            context.getMatrices().popMatrix();
         }
     }
 }

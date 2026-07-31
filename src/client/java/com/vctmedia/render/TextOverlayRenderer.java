@@ -99,8 +99,8 @@ public class TextOverlayRenderer {
         alphaFactor = Math.max(0.0f, Math.min(1.0f, alphaFactor));
         if (alphaFactor <= 0.01f) return;
 
-        context.getMatrices().push();
-        context.getMatrices().scale(1.0f / guiScale, 1.0f / guiScale, 1.0f);
+        context.getMatrices().pushMatrix();
+        context.getMatrices().scale(1.0f / guiScale, 1.0f / guiScale);
 
         float renderScale = screenHeightPx / 1080.0f;
         float baseScale = TEXT_SCALE;
@@ -108,7 +108,7 @@ public class TextOverlayRenderer {
             baseScale += data.globalSize * 0.15f;
         }
         float finalScale = renderScale * Math.max(0.1f, baseScale);
-        context.getMatrices().scale(finalScale, finalScale, 1.0f);
+        context.getMatrices().scale(finalScale, finalScale);
 
         float virtualScreenWidth = screenWidthPx / finalScale;
         float virtualScreenHeight = screenHeightPx / finalScale;
@@ -187,7 +187,7 @@ public class TextOverlayRenderer {
             offsetY = (virtualScreenHeight - y + 50) * (1.0f - slideProgress);
         }
 
-        context.getMatrices().translate(x + offsetX, y + offsetY, 0);
+        context.getMatrices().translate(x + offsetX, y + offsetY);
 
         if (!data.isTransparent) {
             int bgAlpha = (int)(140 * alphaFactor);
@@ -216,10 +216,10 @@ public class TextOverlayRenderer {
                 TextOrchestrator.TextSegment seg = line.segments.get(i);
                 float segScale = 1.0f + (seg.scale * 0.01f);
 
-                context.getMatrices().push();
+                context.getMatrices().pushMatrix();
                 float yOffset = currentY + (line.height - (textRenderer.fontHeight * segScale)) / 2.0f;
-                context.getMatrices().translate(currentX, yOffset, 0);
-                context.getMatrices().scale(segScale, segScale, 1.0f);
+                context.getMatrices().translate(currentX, yOffset);
+                context.getMatrices().scale(segScale, segScale);
 
                 // ITERAMOS CADA ÁTOMO CON SU EFECTO APLICADO LETRA POR LETRA
                 MutableText frameText = Text.empty();
@@ -247,7 +247,7 @@ public class TextOverlayRenderer {
                 }
 
                 context.drawTextWithShadow(textRenderer, frameText, 0, 0, textColorBase);
-                context.getMatrices().pop();
+                context.getMatrices().popMatrix();
 
                 currentX += textRenderer.getWidth(seg.baseText) * segScale;
                 if (i < line.segments.size() - 1) {
@@ -256,6 +256,6 @@ public class TextOverlayRenderer {
             }
             currentY += line.height + lineSpacing;
         }
-        context.getMatrices().pop();
+        context.getMatrices().popMatrix();
     }
 }

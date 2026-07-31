@@ -93,12 +93,12 @@ public abstract class InGameHudMixin {
 
 				ci.cancel();
 
-				float f = (float)this.overlayRemaining - tickCounter.getTickDelta(true);
+				float f = (float)this.overlayRemaining - tickCounter.getTickProgress(true);
 				int alpha = (int)(f * 255.0F / 20.0F);
 				if (alpha > 255) alpha = 255;
 
 				if (alpha > 8) {
-					context.getMatrices().push();
+					context.getMatrices().pushMatrix();
 
 					List<OrderedText> lines = client.textRenderer.wrapLines(this.overlayMessage, 10000);
 
@@ -145,7 +145,7 @@ public abstract class InGameHudMixin {
 						currentY += fontHeight + lineSpacing;
 					}
 
-					context.getMatrices().pop();
+					context.getMatrices().popMatrix();
 				}
 			}
 		}

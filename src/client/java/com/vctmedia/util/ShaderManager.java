@@ -1,15 +1,16 @@
 package com.vctmedia.util;
 
-import com.vctmedia.mixin.client.PostEffectProcessorAccessor;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.GlUniform;
-import net.minecraft.client.gl.PostEffectPass;
 import net.minecraft.client.gl.PostEffectProcessor;
+import net.minecraft.client.gl.ShaderLoader;
 import net.minecraft.util.Identifier;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 public class ShaderManager {
 
@@ -24,12 +25,6 @@ public class ShaderManager {
     public static PostEffectProcessor currentShader;
     public static boolean isEnabled = false;
     public static LinkedList<String> shaderStack = new LinkedList<>();
-
-    // -- VARIABLES PARA LA ANIMACIÓN (FADE) --
-    public static float fadeAmount = 0.0f;
-    public static boolean isFadingOut = false;
-    public static boolean hasFadeUniform = false; // Nuevo: Detecta si el shader soporta la animación
-    public static final float FADE_SPEED = 0.03f;
 
     public static void loadShader(String name) {
         if (name == null || name.equalsIgnoreCase("none") || name.equalsIgnoreCase("off") || name.equalsIgnoreCase("normal")) {
@@ -49,19 +44,13 @@ public class ShaderManager {
             shaderStack.clear();
         }
 
-        // Si el shader actual soporta Fade, iniciamos la salida suave
-        if (hasFadeUniform) {
-            isFadingOut = true;
-        } else {
-            // Si es un shader normal, lo apagamos de golpe para que no se quede pegado
-            isEnabled = false;
-            if (currentShader != null) {
-                currentShader.close();
-                currentShader = null;
-            }
-            if (!shaderStack.isEmpty()) {
-                applyTopShader();
-            }
+        isEnabled = false;
+        if (currentShader != null) {
+            currentShader.close();
+            currentShader = null;
+        }
+        if (!shaderStack.isEmpty()) {
+            applyTopShader();
         }
     }
 
@@ -70,9 +59,6 @@ public class ShaderManager {
         client.execute(() -> {
 
             if (shaderStack.isEmpty()) {
-                if (hasFadeUniform) {
-                    isFadingOut = true;
-                }
                 return;
             }
 
@@ -85,26 +71,16 @@ public class ShaderManager {
                     currentShader = null;
                 }
 
-                currentShader = new PostEffectProcessor(client.getTextureManager(), client.getResourceManager(), client.getFramebuffer(), shaderId);
-                currentShader.setupDimensions(client.getWindow().getFramebufferWidth(), client.getWindow().getFramebufferHeight());
-
-                // --- DETECTOR AUTOMÁTICO DE FADE ---
-                hasFadeUniform = false;
-                List<PostEffectPass> passes = ((PostEffectProcessorAccessor) currentShader).getPasses();
-                for (PostEffectPass pass : passes) {
-                    if (pass.getProgram().getUniformByName("Fade") != null) {
-                        hasFadeUniform = true;
-                        break;
-                    }
-                }
+                ShaderLoader shaderLoader = client.getShaderLoader();
+                Set<Identifier> externalTargets = new HashSet<>();
+                externalTargets.add(PostEffectProcessor.MAIN);
+                currentShader = shaderLoader.loadPostEffect(shaderId, externalTargets);
 
                 isEnabled = true;
-                isFadingOut = false;
-                // Si tiene animación, empieza en 0. Si no, lo forzamos al máximo directamente
-                fadeAmount = hasFadeUniform ? 0.0f : 1.0f;
 
             } catch (Exception e) {
                 System.err.println("No se pudo cargar el shader: " + topShader);
+                e.printStackTrace();
                 shaderStack.removeLast();
                 applyTopShader();
             }
@@ -112,36 +88,8 @@ public class ShaderManager {
     }
 
     public static void updateFadeAnim() {
-        // Solo animamos si el shader está activo y realmente soporta el Fade
-        if (!isEnabled || currentShader == null || !hasFadeUniform) return;
-
-        if (isFadingOut) {
-            fadeAmount -= FADE_SPEED;
-            if (fadeAmount <= 0.0f) {
-                fadeAmount = 0.0f;
-                isEnabled = false;
-                currentShader.close();
-                currentShader = null;
-                isFadingOut = false;
-
-                if (!shaderStack.isEmpty()) {
-                    applyTopShader();
-                }
-                return;
-            }
-        } else {
-            fadeAmount += FADE_SPEED;
-            if (fadeAmount > 1.0f) {
-                fadeAmount = 1.0f;
-            }
-        }
-
-        List<PostEffectPass> passes = ((PostEffectProcessorAccessor) currentShader).getPasses();
-        for (PostEffectPass pass : passes) {
-            GlUniform fadeUniform = pass.getProgram().getUniformByName("Fade");
-            if (fadeUniform != null) {
-                fadeUniform.set(fadeAmount);
-            }
-        }
+        // El sistema de uniforms ha cambiado completamente en 1.21.11
+        // Los uniforms ahora se manejan via GpuBuffer, no via GlUniform.set()
+        // La animacion de fade ya no es posible con el nuevo API de la misma manera
     }
 }

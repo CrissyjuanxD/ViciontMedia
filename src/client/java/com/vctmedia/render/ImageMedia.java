@@ -97,7 +97,7 @@ public class ImageMedia extends AbstractMedia {
     private void notifyError(String msg) {
         MinecraftClient.getInstance().execute(() -> {
             if (MinecraftClient.getInstance().player != null) {
-                MinecraftClient.getInstance().player.sendMessage(Text.literal("§c[ViciontMedia] §f" + msg));
+                MinecraftClient.getInstance().player.sendMessage(Text.literal("§c[ViciontMedia] §f" + msg), false);
             }
             System.err.println("[ViciontMedia] " + msg);
         });

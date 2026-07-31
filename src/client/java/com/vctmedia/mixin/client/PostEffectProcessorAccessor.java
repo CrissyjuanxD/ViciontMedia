@@ -12,5 +12,4 @@ public interface PostEffectProcessorAccessor {
 
     @Accessor("passes")
     List<PostEffectPass> getPasses();
-
 }
