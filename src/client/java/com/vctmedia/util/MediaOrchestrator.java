@@ -13,34 +13,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class MediaOrchestrator {
     private static final List<AbstractMedia> activeMedias = new CopyOnWriteArrayList<>();
 
-    private static boolean isYoutubeUrl(String url) {
-        String lower = url.toLowerCase();
-        return lower.contains("youtube.com/watch") || lower.contains("youtu.be/")
-                || lower.contains("youtube.com/shorts") || lower.contains("m.youtube.com");
-    }
-
-    private static boolean isPlatformExtensionInstalled() {
-        return FabricLoader.getInstance().isModLoaded("watermedia_youtube_extension")
-                || FabricLoader.getInstance().isModLoaded("watermedia_pe")
-                || FabricLoader.getInstance().isModLoaded("watermedia_yt_plugin");
-    }
-
-    private static void notifyPlayer(String msg) {
-        MinecraftClient.getInstance().execute(() -> {
-            if (MinecraftClient.getInstance().player != null) {
-                MinecraftClient.getInstance().player.sendMessage(Text.literal(msg));
-            }
-            System.err.println("[ViciontMedia] " + Text.literal(msg).getString());
-        });
-    }
-
     public static void process(String url, String soundId, long duration, int size, String pos, int opacity, boolean isOverlay, boolean useFade) {
         String lower = url.toLowerCase();
-
-        if (isYoutubeUrl(url) && !isPlatformExtensionInstalled()) {
-            notifyPlayer("§c[ViciontMedia] §fLos links de YouTube requieren el mod §eWATERMeDIA Platform Extension§f (complemento de YouTube). Descárgalo de Modrinth: watermedia-yt-plugin");
-            return;
-        }
 
         boolean isImage = lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".gif");
 
