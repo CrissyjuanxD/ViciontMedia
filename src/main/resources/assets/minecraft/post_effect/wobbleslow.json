@@ -1,17 +1,21 @@
 {
-    "targets": [
-        "swap"
-    ],
+    "targets": {
+        "swap": {}
+    },
     "passes": [
         {
-            "name": "wobbleslow", 
-            "intarget": "minecraft:main",
-            "outtarget": "swap"
+            "fragment_shader": "minecraft:post/wobbleslow",
+            "inputs": [
+                { "sampler_name": "DiffuseSampler", "target": "minecraft:main" }
+            ],
+            "output": "swap"
         },
         {
-            "name": "blit",
-            "intarget": "swap",
-            "outtarget": "minecraft:main"
+            "fragment_shader": "minecraft:post/blit",
+            "inputs": [
+                { "sampler_name": "DiffuseSampler", "target": "swap" }
+            ],
+            "output": "minecraft:main"
         }
     ]
 }

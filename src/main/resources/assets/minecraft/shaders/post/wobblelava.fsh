@@ -7,7 +7,7 @@ varying vec2 oneTexel;
 
 uniform vec2 InSize;
 
-uniform float Time;
+uniform float GameTime;
 uniform vec2 Frequency;
 uniform vec2 WobbleAmount;
 
@@ -45,17 +45,19 @@ vec3 RGBtoHSV(vec3 rgb) {
 }
 
 void main() {
-    // Ondulaciones muy bajas (* 0.15), idéntico a wobblelava
-    float xOffset = sin(texCoord.y * Frequency.x + Time * 3.1415926535 * 2.0) * WobbleAmount.x * 0.15;
-    float yOffset = cos(texCoord.x * Frequency.y + Time * 3.1415926535 * 2.0) * WobbleAmount.y * 0.15;
+    // Misma velocidad que wobble (2.0), pero ondulaciones muy bajas (* 0.15)
+    float xOffset = sin(texCoord.y * Frequency.x + GameTime * 3.1415926535 * 2.0) * WobbleAmount.x * 0.15;
+    float yOffset = cos(texCoord.x * Frequency.y + GameTime * 3.1415926535 * 2.0) * WobbleAmount.y * 0.15;
     vec2 offset = vec2(xOffset, yOffset);
 
     vec4 rgb = texture2D(DiffuseSampler, texCoord + offset);
     vec3 hsv = RGBtoHSV(rgb.rgb);
 
-    // EL TRUCO FINAL: Usamos un péndulo (sin) que se sincroniza perfectamente con el reinicio del reloj.
-    // Pasa por TODOS los colores (0.0 a 1.0) y regresa, haciendo la transición invisible y continua.
-    hsv.x = (sin((hsv.x + Time) * 3.1415926535 * 1.0) * 0.5 + 0.5);
+    // Transición suave y continua SOLO entre colores cálidos (Rojo, Naranja, Amarillo)
+    // Usa la misma base de tiempo que wobble para ir a su misma velocidad
+    hsv.x = (sin((hsv.x + GameTime) * 3.1415926535 * 2.0) * 0.5 + 0.5) * 0.16;
+
+    // No tocamos nada más para que el juego se vea normal, sin filtros oscuros
 
     gl_FragColor = vec4(HSVtoRGB(hsv), 1.0);
 }

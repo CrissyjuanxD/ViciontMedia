@@ -3,6 +3,7 @@ package com.vctmedia.render;
 import com.vctmedia.util.TextOrchestrator;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
+import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.client.util.Window;
@@ -192,7 +193,7 @@ public class TextOverlayRenderer {
         if (!data.isTransparent) {
             int bgAlpha = (int)(140 * alphaFactor);
             int bgColorFinal = (bgAlpha << 24) | (data.bgColor & 0xFFFFFF);
-            context.fill(0, 0, (int)boxWidth, (int)boxHeight, bgColorFinal);
+            context.fill(RenderPipelines.GUI, 0, 0, (int)boxWidth, (int)boxHeight, bgColorFinal);
         }
 
         int textAlpha = (int)(255 * alphaFactor);

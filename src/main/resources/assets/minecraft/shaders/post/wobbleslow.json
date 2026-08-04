@@ -1,0 +1,15 @@
+{
+    "vertex": "minecraft:post/blit",
+    "fragment": "minecraft:post/wobbleslow",
+    "samplers": [
+        { "name": "DiffuseSampler" }
+    ],
+    "uniforms": [
+        { "name": "ProjMat",      "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+        { "name": "InSize",       "type": "vec2",      "count": 1,  "values": [ 1.0, 1.0 ] },
+        { "name": "OutSize",      "type": "vec2",      "count": 1,  "values": [ 1.0, 1.0 ] },
+        { "name": "GameTime",     "type": "float",     "count": 1,  "values": [ 0.0 ] },
+        { "name": "Frequency",    "type": "vec2",      "count": 1,  "values": [ 512.0, 288.0 ] },
+        { "name": "WobbleAmount", "type": "vec2",      "count": 1,  "values": [ 0.002, 0.002 ] }
+    ]
+}

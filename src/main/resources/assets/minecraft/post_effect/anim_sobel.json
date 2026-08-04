@@ -1,17 +1,26 @@
 {
-  "targets": [
-    "swap"
-  ],
-  "passes": [
-    {
-      "name": "anim_sobel",
-      "intarget": "minecraft:main",
-      "outtarget": "swap"
+    "targets": {
+        "swap": {}
     },
-    {
-      "name": "blit",
-      "intarget": "swap",
-      "outtarget": "minecraft:main"
-    }
-  ]
+    "passes": [
+        {
+            "fragment_shader": "minecraft:post/anim_sobel",
+            "inputs": [
+                { "sampler_name": "DiffuseSampler", "target": "minecraft:main" }
+            ],
+            "output": "swap",
+            "uniforms": {
+                "Fade": [
+                    { "name": "Fade", "type": "float", "value": 0.0 }
+                ]
+            }
+        },
+        {
+            "fragment_shader": "minecraft:post/blit",
+            "inputs": [
+                { "sampler_name": "DiffuseSampler", "target": "swap" }
+            ],
+            "output": "minecraft:main"
+        }
+    ]
 }

@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(GameRenderer.class)
 public abstract class GameRendererMixin {
 
-    @Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/GameRenderer;updateWorldIcon()V"))
+    @Inject(method = "render", at = @At("RETURN"))
     private void renderCustomShader(RenderTickCounter tickCounter, boolean tick, CallbackInfo ci) {
 
         ShaderManager.updateFadeAnim();
@@ -21,7 +21,7 @@ public abstract class GameRendererMixin {
         if (ShaderManager.isEnabled && ShaderManager.currentShader != null) {
             MinecraftClient client = MinecraftClient.getInstance();
             ObjectAllocator allocator = ObjectAllocator.TRIVIAL;
-                ShaderManager.currentShader.render(client.getFramebuffer(), allocator);
+            ShaderManager.currentShader.render(client.getFramebuffer(), allocator);
         }
     }
 }

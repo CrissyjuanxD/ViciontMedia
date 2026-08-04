@@ -6,12 +6,9 @@
 		"InGameHudMixin",
 		"ChatHudMixin",
 		"GameRendererMixin",
-		"WindowMixin",
 		"NativeImageAccessor",
 		"PostEffectProcessorAccessor",
 		"PostEffectPassAccessor",
-		"GlTextureAccessor",
-		"GlTextureViewAccessor",
 		"DrawContextAccessor"
 	],
 	"injectors": {

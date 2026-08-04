@@ -1,51 +1,54 @@
 {
-  "targets": [
-    "swap",
-    "previous"
-  ],
-  "passes": [
-    {
-      "name": "color_convolve",
-      "intarget": "minecraft:main",
-      "outtarget": "swap",
-      "uniforms": [
+    "targets": {
+        "swap": {},
+        "previous": { "persistent": true }
+    },
+    "passes": [
         {
-          "name": "Saturation",
-          "values": [ 0.2 ]
-        }
-      ]
-    },
-    {
-      "name": "phosphor",
-      "intarget": "swap",
-      "outtarget": "minecraft:main",
-      "auxtargets": [
+            "fragment_shader": "minecraft:post/color_convolve",
+            "inputs": [
+                { "sampler_name": "DiffuseSampler", "target": "minecraft:main" }
+            ],
+            "output": "swap",
+            "uniforms": {
+                "ColorModulator": [
+                    { "name": "Saturation", "type": "float", "value": 0.2 }
+                ]
+            }
+        },
         {
-          "name": "PrevSampler",
-          "id": "previous"
-        }
-      ],
-      "uniforms": [
+            "fragment_shader": "minecraft:post/phosphor",
+            "inputs": [
+                { "sampler_name": "DiffuseSampler", "target": "swap" },
+                { "sampler_name": "PrevSampler", "target": "previous" }
+            ],
+            "output": "minecraft:main",
+            "uniforms": {
+                "Phosphor": [
+                    { "name": "Phosphor", "type": "vec3", "value": [ 0.95, 0.95, 0.95 ] }
+                ]
+            }
+        },
         {
-          "name": "Phosphor",
-          "values": [ 0.95, 0.95, 0.95 ]
+            "fragment_shader": "minecraft:post/blit",
+            "inputs": [
+                { "sampler_name": "DiffuseSampler", "target": "minecraft:main" }
+            ],
+            "output": "previous"
+        },
+        {
+            "fragment_shader": "minecraft:post/deconverge",
+            "inputs": [
+                { "sampler_name": "DiffuseSampler", "target": "minecraft:main" }
+            ],
+            "output": "swap"
+        },
+        {
+            "fragment_shader": "minecraft:post/blit",
+            "inputs": [
+                { "sampler_name": "DiffuseSampler", "target": "swap" }
+            ],
+            "output": "minecraft:main"
         }
-      ]
-    },
-    {
-      "name": "blit",
-      "intarget": "minecraft:main",
-      "outtarget": "previous"
-    },
-    {
-      "name": "deconverge",
-      "intarget": "minecraft:main",
-      "outtarget": "swap"
-    },
-    {
-      "name": "blit",
-      "intarget": "swap",
-      "outtarget": "minecraft:main"
-    }
-  ]
+    ]
 }

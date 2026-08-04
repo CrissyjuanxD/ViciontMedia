@@ -5,6 +5,7 @@ import com.vctmedia.render.TextOverlayRenderer;
 import com.vctmedia.render.FadeRenderer;
 import com.vctmedia.util.FadeManager;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.InGameHud;
 import net.minecraft.client.render.RenderTickCounter;
@@ -57,11 +58,9 @@ public abstract class InGameHudMixin {
 	}
 
 	private void renderEffectsAndOverlays(DrawContext context, RenderTickCounter tickCounter, MinecraftClient client) {
-		// 1. Dibuja el Video
 		MediaOverlay.render(context, tickCounter);
 		TextOverlayRenderer.render(context, tickCounter);
 
-		// 2. Dibuja el Fade (pantalla negra) por encima del video Y del HUD
 		if (FadeManager.isFading) {
 			float alpha = FadeManager.getFadeAlpha();
 			if (alpha > 0.0f) {
@@ -70,8 +69,6 @@ public abstract class InGameHudMixin {
 		}
 	}
 
-	// NUEVO: Dibujar el Media al FINAL del renderizado general.
-	// Al dibujarse de último, se pone por encima del HUD custom de ViciontGuis.
 	@Inject(method = "render", at = @At("RETURN"))
 	private void onRenderReturn(DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
 		MinecraftClient client = MinecraftClient.getInstance();
@@ -83,8 +80,6 @@ public abstract class InGameHudMixin {
 		MinecraftClient client = MinecraftClient.getInstance();
 
 		if (!client.options.hudHidden) {
-			// (Se eliminó la llamada prematura a renderEffectsAndOverlays de aquí)
-
 			if (this.overlayRemaining > 0 && this.overlayMessage != null) {
 
 				if (this.isVanillaOverlay) {
@@ -130,9 +125,9 @@ public abstract class InGameHudMixin {
 					int boxX2 = startX + maxWidth + paddingX;
 					int boxY2 = startY + totalHeight + paddingY;
 
-					context.fill(boxX1 + 2, boxY1, boxX2 - 2, boxY2, bgColor);
-					context.fill(boxX1 + 1, boxY1 + 1, boxX2 - 1, boxY2 - 1, bgColor);
-					context.fill(boxX1, boxY1 + 2, boxX2, boxY2 - 2, bgColor);
+					context.fill(RenderPipelines.GUI, boxX1 + 2, boxY1, boxX2 - 2, boxY2, bgColor);
+					context.fill(RenderPipelines.GUI, boxX1 + 1, boxY1 + 1, boxX2 - 1, boxY2 - 1, bgColor);
+					context.fill(RenderPipelines.GUI, boxX1, boxY1 + 2, boxX2, boxY2 - 2, bgColor);
 
 					int currentY = startY;
 					for (OrderedText line : lines) {
