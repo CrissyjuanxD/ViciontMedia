@@ -1,8 +1,8 @@
 package com.vctmedia.util;
 
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -60,19 +60,19 @@ public class TextOrchestrator {
     public static class TextSegment {
         public final List<AtomicText> atoms;
         public final int scale;
-        public final Text baseText;
+        public final Component baseText;
 
         public TextSegment(List<AtomicText> atoms, int scale) {
             this.atoms = atoms;
             this.scale = scale;
 
-            MutableText mText = Text.empty();
+            MutableComponent mText = Component.empty();
             for (AtomicText atom : atoms) {
                 Style style = Style.EMPTY.withColor(atom.color)
                         .withBold(atom.bold).withItalic(atom.italic)
-                        .withUnderline(atom.underline).withStrikethrough(atom.strike)
+                        .withUnderlined(atom.underline).withStrikethrough(atom.strike)
                         .withObfuscated(atom.obfuscated);
-                mText.append(Text.literal(atom.text).setStyle(style));
+                mText.append(Component.literal(atom.text).setStyle(style));
             }
             this.baseText = mText;
         }
@@ -120,7 +120,6 @@ public class TextOrchestrator {
             int currentScale = 0;
 
             for (String rawLine : rawLines) {
-                // AQUI ESTA LA MAGIA: Reseteamos el color y estilo al inicio de cada línea.
                 currentState.reset();
 
                 TextLine line = new TextLine();

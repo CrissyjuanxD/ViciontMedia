@@ -1,10 +1,10 @@
 package com.vctmedia.mixin.client;
 
-import com.vctmedia.util.ShaderManager;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.render.RenderTickCounter;
-import net.minecraft.client.util.memory.ObjectAllocator;
+import com.vctmedia.util.VctShaderManager;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.DeltaTracker;
+import com.mojang.blaze3d.resource.GraphicsResourceAllocator;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -14,14 +14,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class GameRendererMixin {
 
     @Inject(method = "render", at = @At("RETURN"))
-    private void renderCustomShader(RenderTickCounter tickCounter, boolean tick, CallbackInfo ci) {
+    private void renderCustomShader(DeltaTracker tickCounter, boolean tick, CallbackInfo ci) {
 
-        ShaderManager.updateFadeAnim();
+        VctShaderManager.updateFadeAnim();
 
-        if (ShaderManager.isEnabled && ShaderManager.currentShader != null) {
-            MinecraftClient client = MinecraftClient.getInstance();
-            ObjectAllocator allocator = ObjectAllocator.TRIVIAL;
-            ShaderManager.currentShader.render(client.getFramebuffer(), allocator);
+        if (VctShaderManager.isEnabled && VctShaderManager.currentShader != null) {
+            Minecraft client = Minecraft.getInstance();
+            VctShaderManager.currentShader.process(
+                    ((GameRenderer) (Object) this).mainRenderTarget(),
+                    GraphicsResourceAllocator.UNPOOLED
+            );
         }
     }
 }

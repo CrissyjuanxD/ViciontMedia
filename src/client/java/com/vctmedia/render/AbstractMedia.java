@@ -1,9 +1,9 @@
 package com.vctmedia.render;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.sound.PositionedSoundInstance;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.resources.Identifier;
 import com.vctmedia.util.FadeManager;
 
 public abstract class AbstractMedia {
@@ -74,13 +74,13 @@ public abstract class AbstractMedia {
     protected void playMcSound() {
         if (soundId == null || soundId.trim().isEmpty()) return;
 
-        MinecraftClient.getInstance().execute(() -> {
+        Minecraft.getInstance().execute(() -> {
             try {
                 Identifier id = Identifier.tryParse(soundId);
                 if (id != null) {
-                    SoundEvent soundEvent = SoundEvent.of(id);
-                    PositionedSoundInstance soundInstance = PositionedSoundInstance.ui(soundEvent, 1.0f, 2.0f);
-                    MinecraftClient.getInstance().getSoundManager().play(soundInstance);
+                    SoundEvent soundEvent = new SoundEvent(id, java.util.Optional.empty());
+                    SimpleSoundInstance soundInstance = SimpleSoundInstance.forUI(soundEvent, 1.0f, 2.0f);
+                    Minecraft.getInstance().getSoundManager().play(soundInstance);
                 }
             } catch (Exception e) { e.printStackTrace(); }
         });

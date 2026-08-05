@@ -1,5 +1,5 @@
 plugins {
-	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
 	id 'maven-publish'
 }
 
@@ -35,16 +35,13 @@ loom {
 dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings loom.officialMojangMappings()
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
 	// Fabric API
-	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
-	// ---------------------------------------------------------
-	// CAMBIO 2: Aquí añadimos WaterMedia (Librería de Video)
-	// ---------------------------------------------------------
-	include(modImplementation("maven.modrinth:watermedia:3.0.0.23"))
+	// WaterMedia (Librería de Video)
+	include(implementation("maven.modrinth:watermedia:3.0.0.23"))
 }
 
 processResources {

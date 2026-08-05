@@ -1,8 +1,8 @@
 package com.vctmedia.util;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.Window;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.platform.Window;
 
 public class VolumeManager {
     private static int volume = 70;
@@ -17,38 +17,38 @@ public class VolumeManager {
         showUntil = System.currentTimeMillis() + 2000;
     }
 
-    public static void render(DrawContext context) {
+    public static void render(GuiGraphicsExtractor context) {
         if (System.currentTimeMillis() < showUntil) {
             String text = "§fViciontMedia Volumen: §6" + volume + "%";
 
-            MinecraftClient client = MinecraftClient.getInstance();
+            Minecraft client = Minecraft.getInstance();
             Window window = client.getWindow();
 
-            float scaleFactor = (float) window.getScaleFactor();
-            int screenWidthPx = window.getFramebufferWidth();
-            int screenHeightPx = window.getFramebufferHeight();
+            float scaleFactor = (float) window.getGuiScale();
+            int screenWidthPx = window.getWidth();
+            int screenHeightPx = window.getHeight();
 
-            context.getMatrices().pushMatrix();
+            context.pose().pushMatrix();
 
-            context.getMatrices().scale(1.0f / scaleFactor, 1.0f / scaleFactor);
+            context.pose().scale(1.0f / scaleFactor, 1.0f / scaleFactor);
 
             float renderScale = screenHeightPx / 1080.0f;
 
             float finalScale = renderScale * 2.2f;
-            context.getMatrices().scale(finalScale, finalScale);
+            context.pose().scale(finalScale, finalScale);
 
             float virtualScreenWidth = screenWidthPx / finalScale;
             float virtualScreenHeight = screenHeightPx / finalScale;
 
-            float textWidth = client.textRenderer.getWidth(text);
-            float textHeight = client.textRenderer.fontHeight;
+            float textWidth = client.font.width(text);
+            float textHeight = client.font.lineHeight;
 
             float x = virtualScreenWidth - textWidth - 10;
             float y = virtualScreenHeight - textHeight - 10;
 
-            context.drawTextWithShadow(client.textRenderer, text, (int)x, (int)y, 0xFFFFFF);
+            context.text(client.font, text, (int)x, (int)y, 0xFFFFFF, true);
 
-            context.getMatrices().popMatrix();
+            context.pose().popMatrix();
         }
     }
 }

@@ -4,8 +4,8 @@ import com.vctmedia.render.AbstractMedia;
 import com.vctmedia.render.ImageMedia;
 import com.vctmedia.render.VideoMedia;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;

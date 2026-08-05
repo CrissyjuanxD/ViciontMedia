@@ -4,11 +4,12 @@ import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.vctmedia.mixin.client.PostEffectPassAccessor;
 import com.vctmedia.mixin.client.PostEffectProcessorAccessor;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.PostEffectPass;
-import net.minecraft.client.gl.PostEffectProcessor;
-import net.minecraft.client.gl.ShaderLoader;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.PostChain;
+import net.minecraft.client.renderer.PostPass;
+import net.minecraft.client.renderer.ShaderManager;
+import net.minecraft.client.renderer.ShaderManager.CompilationException;
+import net.minecraft.resources.Identifier;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -19,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class ShaderManager {
+public class VctShaderManager {
 
     public static final List<String> SHADERS = Arrays.asList(
             "none", "antialias", "art", "bits", "blobs", "blobs2", "blur", "bumpy",
@@ -29,7 +30,7 @@ public class ShaderManager {
             "nightv", "wobblelava", "confusion", "anim_sobel"
     );
 
-    public static PostEffectProcessor currentShader;
+    public static PostChain currentShader;
     public static boolean isEnabled = false;
     public static LinkedList<String> shaderStack = new LinkedList<>();
 
@@ -62,7 +63,7 @@ public class ShaderManager {
     }
 
     private static void applyTopShader() {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         client.execute(() -> {
 
             if (shaderStack.isEmpty()) {
@@ -70,7 +71,7 @@ public class ShaderManager {
             }
 
             String topShader = shaderStack.getLast();
-            Identifier shaderId = Identifier.of("minecraft", "post_effect/" + topShader.toLowerCase() + ".json");
+            Identifier shaderId = Identifier.fromNamespaceAndPath("minecraft", "post_effect/" + topShader.toLowerCase() + ".json");
 
             try {
                 if (currentShader != null) {
@@ -78,10 +79,10 @@ public class ShaderManager {
                     currentShader = null;
                 }
 
-                ShaderLoader shaderLoader = client.getShaderLoader();
+                ShaderManager mcShaderManager = client.getShaderManager();
                 Set<Identifier> externalTargets = new HashSet<>();
-                externalTargets.add(Identifier.of("minecraft", "main"));
-                currentShader = shaderLoader.loadPostEffect(shaderId, externalTargets);
+                externalTargets.add(Identifier.fromNamespaceAndPath("minecraft", "main"));
+                currentShader = mcShaderManager.getPostChain(shaderId, externalTargets);
 
                 isEnabled = true;
 
@@ -102,14 +103,14 @@ public class ShaderManager {
 
         try {
             PostEffectProcessorAccessor processorAccessor = (PostEffectProcessorAccessor) (Object) currentShader;
-            List<PostEffectPass> passes = processorAccessor.getPasses();
+            List<PostPass> passes = processorAccessor.getPasses();
 
-            for (PostEffectPass pass : passes) {
+            for (PostPass pass : passes) {
                 PostEffectPassAccessor passAccessor = (PostEffectPassAccessor) (Object) pass;
-                String passId = passAccessor.getId();
+                String passId = passAccessor.getName();
 
                 if ("anim_sobel".equals(passId)) {
-                    Map<String, GpuBuffer> uniformBuffers = passAccessor.getUniformBuffers();
+                    Map<String, GpuBuffer> uniformBuffers = passAccessor.getCustomUniforms();
                     GpuBuffer oldBuffer = uniformBuffers.get("Fade");
                     if (oldBuffer != null) {
                         oldBuffer.close();

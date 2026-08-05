@@ -2,8 +2,8 @@ package com.vctmedia.render;
 
 import com.vctmedia.ViciontMediaClient;
 import com.vctmedia.util.FadeManager;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 import org.watermedia.api.media.MediaAPI;
 import org.watermedia.api.media.MRL;
 import org.watermedia.api.media.players.MediaPlayer;
@@ -55,7 +55,7 @@ public class ImageMedia extends AbstractMedia {
                     return;
                 }
 
-                mrl.subscribe(loaded -> MinecraftClient.getInstance().execute(this::createPlayer));
+                mrl.subscribe(loaded -> Minecraft.getInstance().execute(this::createPlayer));
 
                 this.startTime = System.currentTimeMillis();
                 if (duration >= 1000) this.endTime = startTime + duration;
@@ -73,7 +73,7 @@ public class ImageMedia extends AbstractMedia {
 
         try {
             Thread renderThread = Thread.currentThread();
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
             player = MediaAPI.createPlayer(mrl, 0,
                     () -> MediaAPI.glEngine(renderThread, mc::execute),
                     () -> null);
@@ -95,9 +95,9 @@ public class ImageMedia extends AbstractMedia {
     }
 
     private void notifyError(String msg) {
-        MinecraftClient.getInstance().execute(() -> {
-            if (MinecraftClient.getInstance().player != null) {
-                MinecraftClient.getInstance().player.sendMessage(Text.literal("§c[ViciontMedia] §f" + msg), false);
+        Minecraft.getInstance().execute(() -> {
+            if (Minecraft.getInstance().player != null) {
+                Minecraft.getInstance().player.sendSystemMessage(Component.literal("§c[ViciontMedia] §f" + msg));
             }
             System.err.println("[ViciontMedia] " + msg);
         });

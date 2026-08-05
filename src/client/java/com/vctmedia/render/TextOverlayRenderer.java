@@ -1,39 +1,32 @@
 package com.vctmedia.render;
 
 import com.vctmedia.util.TextOrchestrator;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gl.RenderPipelines;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.RenderTickCounter;
-import net.minecraft.client.util.Window;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.DeltaTracker;
+import com.mojang.blaze3d.platform.Window;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.Component;
 
 public class TextOverlayRenderer {
     private static final float TEXT_SCALE = 2.4f;
 
-    // METODO PARA CALCULAR LA OLA DE PARPADEO (WAVE PULSATE)
     public static int calculatePulsateColor(int baseColor, long now, int charIndex) {
-        // Desfase de tiempo: Cada letra va 80ms "atrás" en el tiempo creando una ola de izq a der.
         long offset = charIndex * 80L;
-        // Evitar números negativos en el módulo usando absoluto o limitando a positivo
         long time = Math.max(0, now - offset);
 
-        // Ciclo de 1.5 segundos
         float cycle = (time % 1500L) / 1500.0f;
 
         float wave = (float) Math.sin(cycle * Math.PI);
-        // Elevado a la 6ta potencia hace que se quede en su color base mucho más tiempo,
-        // y el brillo blanco sea como un "flash" suave y rápido que pasa.
         float intensity = (float) Math.pow(wave, 6);
 
         int r1 = (baseColor >> 16) & 0xFF;
         int g1 = (baseColor >> 8) & 0xFF;
         int b1 = baseColor & 0xFF;
 
-        int r2 = 230; // Blanco difuminado
+        int r2 = 230;
         int g2 = 230;
         int b2 = 230;
 
@@ -44,7 +37,7 @@ public class TextOverlayRenderer {
         return (r << 16) | (g << 8) | b;
     }
 
-    public static void render(DrawContext context, RenderTickCounter tickCounter) {
+    public static void render(GuiGraphicsExtractor context, DeltaTracker tickCounter) {
         var texts = TextOrchestrator.getActiveTexts();
         if (texts.isEmpty()) return;
 
@@ -54,14 +47,14 @@ public class TextOverlayRenderer {
         }
     }
 
-    public static void renderData(DrawContext context, TextOrchestrator.TextData data, long now, float overrideX, float overrideY) {
-        MinecraftClient client = MinecraftClient.getInstance();
+    public static void renderData(GuiGraphicsExtractor context, TextOrchestrator.TextData data, long now, float overrideX, float overrideY) {
+        Minecraft client = Minecraft.getInstance();
         Window window = client.getWindow();
-        TextRenderer textRenderer = client.textRenderer;
+        Font font = client.font;
 
-        float guiScale = (float) window.getScaleFactor();
-        int screenWidthPx = window.getFramebufferWidth();
-        int screenHeightPx = window.getFramebufferHeight();
+        float guiScale = (float) window.getGuiScale();
+        int screenWidthPx = window.getWidth();
+        int screenHeightPx = window.getHeight();
 
         long elapsed = now - data.startTime;
         long timeLeft = data.endTime - now;
@@ -100,8 +93,8 @@ public class TextOverlayRenderer {
         alphaFactor = Math.max(0.0f, Math.min(1.0f, alphaFactor));
         if (alphaFactor <= 0.01f) return;
 
-        context.getMatrices().pushMatrix();
-        context.getMatrices().scale(1.0f / guiScale, 1.0f / guiScale);
+        context.pose().pushMatrix();
+        context.pose().scale(1.0f / guiScale, 1.0f / guiScale);
 
         float renderScale = screenHeightPx / 1080.0f;
         float baseScale = TEXT_SCALE;
@@ -109,7 +102,7 @@ public class TextOverlayRenderer {
             baseScale += data.globalSize * 0.15f;
         }
         float finalScale = renderScale * Math.max(0.1f, baseScale);
-        context.getMatrices().scale(finalScale, finalScale);
+        context.pose().scale(finalScale, finalScale);
 
         float virtualScreenWidth = screenWidthPx / finalScale;
         float virtualScreenHeight = screenHeightPx / finalScale;
@@ -118,22 +111,22 @@ public class TextOverlayRenderer {
         float totalHeight = 0;
         int padding = 12;
         int lineSpacing = 4;
-        float spaceWidth = textRenderer.getWidth(" ");
+        float spaceWidth = font.width(" ");
 
         for (TextOrchestrator.TextLine line : data.lines) {
             float lineWidth = 0;
-            float lineMaxHeight = textRenderer.fontHeight;
+            float lineMaxHeight = font.lineHeight;
 
             for (int i = 0; i < line.segments.size(); i++) {
                 TextOrchestrator.TextSegment seg = line.segments.get(i);
                 float segScale = 1.0f + (seg.scale * 0.01f);
 
-                lineWidth += textRenderer.getWidth(seg.baseText) * segScale;
+                lineWidth += font.width(seg.baseText) * segScale;
                 if (i < line.segments.size() - 1) {
                     lineWidth += spaceWidth * segScale;
                 }
-                if (textRenderer.fontHeight * segScale > lineMaxHeight) {
-                    lineMaxHeight = textRenderer.fontHeight * segScale;
+                if (font.lineHeight * segScale > lineMaxHeight) {
+                    lineMaxHeight = font.lineHeight * segScale;
                 }
             }
             line.width = lineWidth;
@@ -188,12 +181,12 @@ public class TextOverlayRenderer {
             offsetY = (virtualScreenHeight - y + 50) * (1.0f - slideProgress);
         }
 
-        context.getMatrices().translate(x + offsetX, y + offsetY);
+        context.pose().translate(x + offsetX, y + offsetY);
 
         if (!data.isTransparent) {
             int bgAlpha = (int)(140 * alphaFactor);
             int bgColorFinal = (bgAlpha << 24) | (data.bgColor & 0xFFFFFF);
-            context.fill(RenderPipelines.GUI, 0, 0, (int)boxWidth, (int)boxHeight, bgColorFinal);
+            context.fill(net.minecraft.client.renderer.RenderPipelines.GUI, 0, 0, (int)boxWidth, (int)boxHeight, bgColorFinal);
         }
 
         int textAlpha = (int)(255 * alphaFactor);
@@ -217,14 +210,13 @@ public class TextOverlayRenderer {
                 TextOrchestrator.TextSegment seg = line.segments.get(i);
                 float segScale = 1.0f + (seg.scale * 0.01f);
 
-                context.getMatrices().pushMatrix();
-                float yOffset = currentY + (line.height - (textRenderer.fontHeight * segScale)) / 2.0f;
-                context.getMatrices().translate(currentX, yOffset);
-                context.getMatrices().scale(segScale, segScale);
+                context.pose().pushMatrix();
+                float yOffset = currentY + (line.height - (font.lineHeight * segScale)) / 2.0f;
+                context.pose().translate(currentX, yOffset);
+                context.pose().scale(segScale, segScale);
 
-                // ITERAMOS CADA ÁTOMO CON SU EFECTO APLICADO LETRA POR LETRA
-                MutableText frameText = Text.empty();
-                int charIndex = 0; // Índice de la letra para crear la ola
+                MutableComponent frameText = Component.empty();
+                int charIndex = 0;
 
                 for (TextOrchestrator.AtomicText atom : seg.atoms) {
                     if (atom.pulsate) {
@@ -232,31 +224,31 @@ public class TextOverlayRenderer {
                             int renderColor = calculatePulsateColor(atom.color, now, charIndex);
                             Style style = Style.EMPTY.withColor(renderColor)
                                     .withBold(atom.bold).withItalic(atom.italic)
-                                    .withUnderline(atom.underline).withStrikethrough(atom.strike)
+                                    .withUnderlined(atom.underline).withStrikethrough(atom.strike)
                                     .withObfuscated(atom.obfuscated);
-                            frameText.append(Text.literal(String.valueOf(atom.text.charAt(c))).setStyle(style));
-                            charIndex++; // Incrementa para desfasar la ola de la siguiente letra
+                            frameText.append(Component.literal(String.valueOf(atom.text.charAt(c))).setStyle(style));
+                            charIndex++;
                         }
                     } else {
                         Style style = Style.EMPTY.withColor(atom.color)
                                 .withBold(atom.bold).withItalic(atom.italic)
-                                .withUnderline(atom.underline).withStrikethrough(atom.strike)
+                                .withUnderlined(atom.underline).withStrikethrough(atom.strike)
                                 .withObfuscated(atom.obfuscated);
-                        frameText.append(Text.literal(atom.text).setStyle(style));
+                        frameText.append(Component.literal(atom.text).setStyle(style));
                         charIndex += atom.text.length();
                     }
                 }
 
-                context.drawTextWithShadow(textRenderer, frameText, 0, 0, textColorBase);
-                context.getMatrices().popMatrix();
+                context.text(font, frameText, 0, 0, textColorBase, true);
+                context.pose().popMatrix();
 
-                currentX += textRenderer.getWidth(seg.baseText) * segScale;
+                currentX += font.width(seg.baseText) * segScale;
                 if (i < line.segments.size() - 1) {
                     currentX += (spaceWidth * segScale) + extraGap;
                 }
             }
             currentY += line.height + lineSpacing;
         }
-        context.getMatrices().popMatrix();
+        context.pose().popMatrix();
     }
 }

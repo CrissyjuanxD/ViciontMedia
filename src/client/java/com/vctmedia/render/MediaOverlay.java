@@ -1,17 +1,17 @@
 package com.vctmedia.render;
 
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.vctmedia.mixin.client.DrawContextAccessor;
+import com.mojang.blaze3d.textures.GpuSampler;
+import com.mojang.blaze3d.textures.GpuTextureView;
 import com.vctmedia.util.MediaOrchestrator;
 import com.vctmedia.util.VolumeManager;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.GpuSampler;
-import net.minecraft.client.gl.RenderPipelines;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.RenderTickCounter;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.client.util.Window;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.platform.Window;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -19,11 +19,9 @@ import java.nio.ByteOrder;
 public class MediaOverlay {
     private static final float REFERENCE_HEIGHT = 1080.0f;
 
-    private static NativeImageBackedTexture backingTexture;
+    private static DynamicTexture backingTexture;
     private static int lastVideoWidth = -1;
     private static int lastVideoHeight = -1;
-
-    private static GpuSampler gpuSampler;
 
     private static void ensureTexture(int width, int height) {
         if (width <= 0) width = 1;
@@ -32,10 +30,8 @@ public class MediaOverlay {
         if (backingTexture == null || lastVideoWidth != width || lastVideoHeight != height) {
             if (backingTexture != null) {
                 backingTexture.close();
-                gpuSampler = null;
             }
-            backingTexture = new NativeImageBackedTexture(width, height, false);
-            backingTexture.setFilter(true, false);
+            backingTexture = new DynamicTexture("vctmedia", width, height, false);
             lastVideoWidth = width;
             lastVideoHeight = height;
         }
@@ -48,8 +44,8 @@ public class MediaOverlay {
             ByteBuffer pixels = readGlTexturePixels(glId, width, height);
             if (pixels == null) return;
 
-            NativeImage image = backingTexture.getImage();
-            long imagePointer = ((com.vctmedia.mixin.client.NativeImageAccessor) (Object) image).getPointer();
+            NativeImage image = backingTexture.getPixels();
+            long imagePointer = image.getPointer();
 
             org.lwjgl.system.MemoryUtil.memCopy(
                     org.lwjgl.system.MemoryUtil.memAddress(pixels),
@@ -83,28 +79,16 @@ public class MediaOverlay {
         }
     }
 
-    private static GpuSampler getSampler(NativeImageBackedTexture texture) {
-        if (gpuSampler == null) {
-            gpuSampler = texture.getTextureView().createSampler(
-                    com.mojang.blaze3d.textures.AddressMode.CLAMP_TO_EDGE,
-                    com.mojang.blaze3d.textures.AddressMode.CLAMP_TO_EDGE,
-                    com.mojang.blaze3d.textures.FilterMode.LINEAR,
-                    com.mojang.blaze3d.textures.FilterMode.LINEAR
-            );
-        }
-        return gpuSampler;
-    }
-
-    public static void render(DrawContext context, RenderTickCounter tickCounter) {
+    public static void render(GuiGraphicsExtractor context, DeltaTracker tickCounter) {
         var medias = MediaOrchestrator.getActiveList();
 
         if (!medias.isEmpty()) {
-            float partialTick = tickCounter.getTickProgress(true);
-            Window window = MinecraftClient.getInstance().getWindow();
+            float partialTick = tickCounter.getGameTimeDeltaPartialTick(true);
+            Window window = Minecraft.getInstance().getWindow();
 
-            float guiScale = (float) window.getScaleFactor();
-            int screenWidthPx = window.getFramebufferWidth();
-            int screenHeightPx = window.getFramebufferHeight();
+            float guiScale = (float) window.getGuiScale();
+            int screenWidthPx = window.getWidth();
+            int screenHeightPx = window.getHeight();
 
             for (AbstractMedia media : medias) {
                 int textureId = media.getGlId(partialTick);
@@ -117,14 +101,11 @@ public class MediaOverlay {
 
                 if (backingTexture == null) continue;
 
-                float alpha = media.opacity / 100.0f;
-                int color = ((int)(alpha * 255.0f) & 0xFF) << 24 | 0xFFFFFF;
-
-                context.getMatrices().pushMatrix();
-                context.getMatrices().scale(1.0f / guiScale, 1.0f / guiScale);
+                context.pose().pushMatrix();
+                context.pose().scale(1.0f / guiScale, 1.0f / guiScale);
 
                 float renderScale = screenHeightPx / REFERENCE_HEIGHT;
-                context.getMatrices().scale(renderScale, renderScale);
+                context.pose().scale(renderScale, renderScale);
 
                 float virtualScreenWidth = screenWidthPx / renderScale;
                 float virtualScreenHeight = REFERENCE_HEIGHT;
@@ -180,16 +161,14 @@ public class MediaOverlay {
                     }
                 }
 
-                RenderPipeline pipeline = RenderPipelines.GUI_TEXTURED;
-                GpuSampler sampler = getSampler(backingTexture);
+                GpuTextureView view = backingTexture.getTextureView();
+                GpuSampler sampler = backingTexture.getSampler();
 
-                ((DrawContextAccessor) context).vctmedia$drawTexturedQuad(
-                        pipeline, backingTexture.getTextureView(), sampler,
-                        (int) x, (int) y, (int) (x + width), (int) (y + height),
-                        0f, 0f, 1f, 1f, color
-                );
+                context.blit(view, sampler,
+                        (int) x, (int) y, (int) width, (int) height,
+                        0f, 0f, 1f, 1f);
 
-                context.getMatrices().popMatrix();
+                context.pose().popMatrix();
             }
         }
 
@@ -200,10 +179,6 @@ public class MediaOverlay {
         if (backingTexture != null) {
             backingTexture.close();
             backingTexture = null;
-        }
-        if (gpuSampler != null) {
-            gpuSampler.close();
-            gpuSampler = null;
         }
     }
 }
