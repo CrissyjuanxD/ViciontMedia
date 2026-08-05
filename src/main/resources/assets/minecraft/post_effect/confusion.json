@@ -1,52 +1,89 @@
 {
     "targets": {
         "swap": {},
-        "previous": { "persistent": true }
+        "previous": {
+            "persistent": true
+        }
     },
     "passes": [
         {
+            "vertex_shader": "minecraft:post/blit",
             "fragment_shader": "minecraft:post/color_convolve",
             "inputs": [
-                { "sampler_name": "DiffuseSampler", "target": "minecraft:main" }
+                {
+                    "sampler_name": "DiffuseSampler",
+                    "target": "minecraft:main"
+                }
             ],
             "output": "swap",
             "uniforms": {
                 "ColorModulator": [
-                    { "name": "Saturation", "type": "float", "value": 0.2 }
+                    {
+                        "name": "Saturation",
+                        "type": "float",
+                        "value": 0.2
+                    }
                 ]
             }
         },
         {
+            "vertex_shader": "minecraft:post/blit",
             "fragment_shader": "minecraft:post/phosphor",
             "inputs": [
-                { "sampler_name": "DiffuseSampler", "target": "swap" },
-                { "sampler_name": "PrevSampler", "target": "previous" }
+                {
+                    "sampler_name": "DiffuseSampler",
+                    "target": "swap"
+                },
+                {
+                    "sampler_name": "PrevSampler",
+                    "target": "previous"
+                }
             ],
             "output": "minecraft:main",
             "uniforms": {
                 "Phosphor": [
-                    { "name": "Phosphor", "type": "vec3", "value": [ 0.95, 0.95, 0.95 ] }
+                    {
+                        "name": "Phosphor",
+                        "type": "vec3",
+                        "value": [
+                            0.95,
+                            0.95,
+                            0.95
+                        ]
+                    }
                 ]
             }
         },
         {
+            "vertex_shader": "minecraft:post/blit",
             "fragment_shader": "minecraft:post/blit",
             "inputs": [
-                { "sampler_name": "DiffuseSampler", "target": "minecraft:main" }
+                {
+                    "sampler_name": "DiffuseSampler",
+                    "target": "minecraft:main"
+                }
             ],
             "output": "previous"
         },
         {
+            "vertex_shader": "minecraft:post/blit",
             "fragment_shader": "minecraft:post/deconverge",
             "inputs": [
-                { "sampler_name": "DiffuseSampler", "target": "minecraft:main" }
+                {
+                    "sampler_name": "DiffuseSampler",
+                    "target": "minecraft:main"
+                }
             ],
             "output": "swap"
         },
         {
+            "vertex_shader": "minecraft:post/blit",
             "fragment_shader": "minecraft:post/blit",
             "inputs": [
-                { "sampler_name": "DiffuseSampler", "target": "swap" }
+                {
+                    "sampler_name": "DiffuseSampler",
+                    "target": "swap"
+                }
             ],
             "output": "minecraft:main"
         }

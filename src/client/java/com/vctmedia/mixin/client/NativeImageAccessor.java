@@ -1,3 +1,4 @@
+/*
 package com.vctmedia.mixin.client;
 
 import com.mojang.blaze3d.platform.NativeImage;
@@ -9,3 +10,4 @@ public interface NativeImageAccessor {
     @Accessor("pointer")
     long getPointer();
 }
+*/

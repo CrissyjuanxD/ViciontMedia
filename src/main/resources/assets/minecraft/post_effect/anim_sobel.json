@@ -4,21 +4,33 @@
     },
     "passes": [
         {
+            "vertex_shader": "minecraft:post/blit",
             "fragment_shader": "minecraft:post/anim_sobel",
             "inputs": [
-                { "sampler_name": "DiffuseSampler", "target": "minecraft:main" }
+                {
+                    "sampler_name": "DiffuseSampler",
+                    "target": "minecraft:main"
+                }
             ],
             "output": "swap",
             "uniforms": {
                 "Fade": [
-                    { "name": "Fade", "type": "float", "value": 0.0 }
+                    {
+                        "name": "Fade",
+                        "type": "float",
+                        "value": 0.0
+                    }
                 ]
             }
         },
         {
+            "vertex_shader": "minecraft:post/blit",
             "fragment_shader": "minecraft:post/blit",
             "inputs": [
-                { "sampler_name": "DiffuseSampler", "target": "swap" }
+                {
+                    "sampler_name": "DiffuseSampler",
+                    "target": "swap"
+                }
             ],
             "output": "minecraft:main"
         }

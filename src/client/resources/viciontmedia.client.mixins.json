@@ -6,10 +6,8 @@
 		"InGameHudMixin",
 		"ChatHudMixin",
 		"GameRendererMixin",
-		"NativeImageAccessor",
 		"PostEffectProcessorAccessor",
-		"PostEffectPassAccessor",
-		"DrawContextAccessor"
+		"PostEffectPassAccessor"
 	],
 	"injectors": {
 		"defaultRequire": 1

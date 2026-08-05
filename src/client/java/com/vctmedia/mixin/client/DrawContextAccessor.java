@@ -1,3 +1,4 @@
+/*
 package com.vctmedia.mixin.client;
 
 import com.mojang.blaze3d.pipeline.RenderPipeline;
@@ -15,3 +16,4 @@ public interface DrawContextAccessor {
                                    int x1, int y1, int x2, int y2,
                                    float u1, float v1, float u2, float v2, int color);
 }
+*/

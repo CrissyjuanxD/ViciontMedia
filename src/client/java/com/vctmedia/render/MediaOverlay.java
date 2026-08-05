@@ -44,14 +44,15 @@ public class MediaOverlay {
             ByteBuffer pixels = readGlTexturePixels(glId, width, height);
             if (pixels == null) return;
 
+            // NativeImage no expone un puntero nativo crudo desde MC 26.2.
+            // La API pública soportada ahora es getPixelBytes(), que da acceso
+            // directo al ByteBuffer que respalda la imagen.
             NativeImage image = backingTexture.getPixels();
-            long imagePointer = image.getPointer();
+            ByteBuffer imageBytes = image.getPixelBytes();
 
-            org.lwjgl.system.MemoryUtil.memCopy(
-                    org.lwjgl.system.MemoryUtil.memAddress(pixels),
-                    imagePointer,
-                    (long) width * height * 4
-            );
+            pixels.rewind();
+            imageBytes.rewind();
+            imageBytes.put(pixels);
 
             backingTexture.upload();
         } catch (Exception e) {
@@ -164,9 +165,16 @@ public class MediaOverlay {
                 GpuTextureView view = backingTexture.getTextureView();
                 GpuSampler sampler = backingTexture.getSampler();
 
+                // blit(view, sampler, x0, y0, x1, y1, u0, u1, v0, v1) en 26.2 recibe
+                // las DOS ESQUINAS del rectángulo, no (x,y)+(width,height).
+                int x0 = (int) x;
+                int y0 = (int) y;
+                int x1 = (int) (x + width);
+                int y1 = (int) (y + height);
+
                 context.blit(view, sampler,
-                        (int) x, (int) y, (int) width, (int) height,
-                        0f, 0f, 1f, 1f);
+                        x0, y0, x1, y1,
+                        0f, 1f, 0f, 1f);
 
                 context.pose().popMatrix();
             }

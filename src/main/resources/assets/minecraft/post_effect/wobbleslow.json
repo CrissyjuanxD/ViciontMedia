@@ -4,16 +4,24 @@
     },
     "passes": [
         {
+            "vertex_shader": "minecraft:post/blit",
             "fragment_shader": "minecraft:post/wobbleslow",
             "inputs": [
-                { "sampler_name": "DiffuseSampler", "target": "minecraft:main" }
+                {
+                    "sampler_name": "DiffuseSampler",
+                    "target": "minecraft:main"
+                }
             ],
             "output": "swap"
         },
         {
+            "vertex_shader": "minecraft:post/blit",
             "fragment_shader": "minecraft:post/blit",
             "inputs": [
-                { "sampler_name": "DiffuseSampler", "target": "swap" }
+                {
+                    "sampler_name": "DiffuseSampler",
+                    "target": "swap"
+                }
             ],
             "output": "minecraft:main"
         }
