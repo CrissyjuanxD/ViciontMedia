@@ -21,14 +21,9 @@ public class ImageMedia extends AbstractMedia {
     private int cachedHeight = -1;
     private int cachedTexture = -1;
     private Boolean cachedHasVideo = null;
-    private long lastTexturePollMs = 0;
     private boolean loadFailed = false;
     private long loadStartTime = 0;
     private static final long LOAD_TIMEOUT_MS = 15000;
-
-    // Polling adaptativo: si el frame tardo mucho, dar mas tiempo antes del siguiente poll
-    private static final long POLL_MIN_MS = 33;   // ~30fps en condiciones normales
-    private static final long POLL_MAX_MS = 100;  // maximo si el frame fue pesado
 
     public ImageMedia(String url, String soundId, long duration, int size, String pos, int opacity, boolean isOverlay, boolean useFade) {
         super(url, soundId, duration, size, pos, opacity, isOverlay, useFade);
@@ -126,33 +121,23 @@ public class ImageMedia extends AbstractMedia {
         }
 
         if (player != null && hasVideo()) {
-            long now = System.currentTimeMillis();
-
-            // Polling adaptativo: si paso mucho tiempo desde el ultimo poll, esperar mas
-            long elapsed = now - lastTexturePollMs;
-            long interval = (lastTexturePollMs > 0 && elapsed > POLL_MAX_MS) ? POLL_MAX_MS : POLL_MIN_MS;
-
-            if (elapsed >= interval) {
-                lastTexturePollMs = now;
-
-                if (maxLoops > 1) {
-                    long currentTime = player.time();
-                    if (lastTime > 0 && currentTime < lastTime) {
-                        loopCount++;
-                        if (loopCount >= maxLoops - 1) {
-                            player.repeat(false);
-                        }
+            if (maxLoops > 1) {
+                long currentTime = player.time();
+                if (lastTime > 0 && currentTime < lastTime) {
+                    loopCount++;
+                    if (loopCount >= maxLoops - 1) {
+                        player.repeat(false);
                     }
-                    lastTime = currentTime;
                 }
+                lastTime = currentTime;
+            }
 
-                long tex = player.texture();
-                if (tex > 0) {
-                    cachedTexture = (int) tex;
-                    // El video aparecio — avisar al fade para que empiece a salir del negro
-                    if (useFade && size <= 0) {
-                        FadeManager.notifyVideoReady();
-                    }
+            // Llamamos a texture() libremente para que WaterMedia despache las tareas GL pendientes
+            long tex = player.texture();
+            if (tex > 0) {
+                cachedTexture = (int) tex;
+                if (useFade && size <= 0) {
+                    FadeManager.notifyVideoReady();
                 }
             }
             return cachedTexture;

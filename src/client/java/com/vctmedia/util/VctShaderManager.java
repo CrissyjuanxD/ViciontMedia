@@ -71,7 +71,9 @@ public class VctShaderManager {
             }
 
             String topShader = shaderStack.getLast();
-            Identifier shaderId = Identifier.fromNamespaceAndPath("minecraft", "post_effect/" + topShader.toLowerCase() + ".json");
+            // ShaderManager ya antepone "post_effect/" y agrega ".json" al resolver
+            // el recurso: hay que pasarle solo el id "pelado" (namespace:name).
+            Identifier shaderId = Identifier.fromNamespaceAndPath("minecraft", topShader.toLowerCase());
 
             try {
                 if (currentShader != null) {

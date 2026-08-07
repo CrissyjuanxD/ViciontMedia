@@ -21,13 +21,9 @@ public class VideoMedia extends AbstractMedia {
     private int cachedHeight = -1;
     private int cachedTexture = -1;
     private Boolean cachedHasVideo = null;
-    private long lastTexturePollMs = 0;
     private boolean loadFailed = false;
     private long loadStartTime = 0;
     private static final long LOAD_TIMEOUT_MS = 20000;
-
-    private static final long POLL_MIN_MS = 33;
-    private static final long POLL_MAX_MS = 100;
 
     public VideoMedia(String url, String soundId, long duration, int size, String pos, int opacity, boolean isOverlay, boolean useFade) {
         super(url, soundId, duration, size, pos, opacity, isOverlay, useFade);
@@ -136,18 +132,12 @@ public class VideoMedia extends AbstractMedia {
                 lastVolume = currentVol;
             }
 
-            long now = System.currentTimeMillis();
-            long elapsed = now - lastTexturePollMs;
-            long interval = (lastTexturePollMs > 0 && elapsed > POLL_MAX_MS) ? POLL_MAX_MS : POLL_MIN_MS;
-
-            if (elapsed >= interval) {
-                lastTexturePollMs = now;
-                long tex = player.texture();
-                if (tex > 0) {
-                    cachedTexture = (int) tex;
-                    if (useFade && size <= 0) {
-                        FadeManager.notifyVideoReady();
-                    }
+            // Llamada directa sin bloquear los ms, WaterMedia lo sincroniza con el motor de Audio
+            long tex = player.texture();
+            if (tex > 0) {
+                cachedTexture = (int) tex;
+                if (useFade && size <= 0) {
+                    FadeManager.notifyVideoReady();
                 }
             }
             return cachedTexture;
