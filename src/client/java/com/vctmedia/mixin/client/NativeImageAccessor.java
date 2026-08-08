@@ -1,3 +1,4 @@
+/*
 package com.vctmedia.mixin.client;
 
 import net.minecraft.client.texture.NativeImage;
@@ -8,4 +9,4 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface NativeImageAccessor {
     @Accessor("pointer")
     long getPointer();
-}
+}*/

@@ -7,7 +7,6 @@
 		"ChatHudMixin",
 		"GameRendererMixin",
 		"WindowMixin",
-		"NativeImageAccessor",
 		"PostEffectProcessorAccessor",
 		"PostEffectPassAccessor",
 		"GlTextureAccessor",
