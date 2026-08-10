@@ -8,10 +8,7 @@
 		"GameRendererMixin",
 		"WindowMixin",
 		"PostEffectProcessorAccessor",
-		"PostEffectPassAccessor",
-		"GlTextureAccessor",
-		"GlTextureViewAccessor",
-		"DrawContextAccessor"
+		"PostEffectPassAccessor"
 	],
 	"injectors": {
 		"defaultRequire": 1
