@@ -127,10 +127,8 @@ public class TextOverlayRenderer {
                 TextOrchestrator.TextSegment seg = line.segments.get(i);
                 float segScale = 1.0f + (seg.scale * 0.01f);
 
+                lineWidth += seg.spacesBefore * spaceWidth * segScale;
                 lineWidth += textRenderer.getWidth(seg.baseText) * segScale;
-                if (i < line.segments.size() - 1) {
-                    lineWidth += spaceWidth * segScale;
-                }
                 if (textRenderer.fontHeight * segScale > lineMaxHeight) {
                     lineMaxHeight = textRenderer.fontHeight * segScale;
                 }
@@ -216,6 +214,8 @@ public class TextOverlayRenderer {
                 TextOrchestrator.TextSegment seg = line.segments.get(i);
                 float segScale = 1.0f + (seg.scale * 0.01f);
 
+                currentX += seg.spacesBefore * spaceWidth * segScale;
+
                 context.getMatrices().pushMatrix();
                 float yOffset = currentY + (line.height - (textRenderer.fontHeight * segScale)) / 2.0f;
                 context.getMatrices().translate(currentX, yOffset);
@@ -251,7 +251,7 @@ public class TextOverlayRenderer {
 
                 currentX += textRenderer.getWidth(seg.baseText) * segScale;
                 if (i < line.segments.size() - 1) {
-                    currentX += (spaceWidth * segScale) + extraGap;
+                    currentX += extraGap;
                 }
             }
             currentY += line.height + lineSpacing;

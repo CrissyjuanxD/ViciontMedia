@@ -61,6 +61,7 @@ public class TextOrchestrator {
         public final List<AtomicText> atoms;
         public final int scale;
         public final Text baseText;
+        public int spacesBefore = 0;
 
         public TextSegment(List<AtomicText> atoms, int scale) {
             this.atoms = atoms;
@@ -131,21 +132,37 @@ public class TextOrchestrator {
                 else if (rawLine.startsWith("[right]")) { line.alignment = "right"; rawLine = rawLine.substring(7).trim(); }
                 else if (rawLine.startsWith("[justify]")) { line.alignment = "justify"; rawLine = rawLine.substring(9).trim(); }
 
-                String[] tokens = rawLine.split(" ");
+                int pendingSpaces = 0;
+                StringBuilder tokenBuilder = new StringBuilder();
 
-                for (String token : tokens) {
-                    if (token.isEmpty()) continue;
+                for (int i = 0; i <= rawLine.length(); i++) {
+                    char c = i < rawLine.length() ? rawLine.charAt(i) : '\0';
 
-                    Matcher m = SIZE_PATTERN.matcher(token);
-                    if (m.matches()) {
-                        currentScale = Integer.parseInt(m.group(1));
-                        token = m.group(2);
-                    }
+                    if (i == rawLine.length() || c == ' ') {
+                        if (tokenBuilder.length() > 0) {
+                            String token = tokenBuilder.toString();
+                            tokenBuilder.setLength(0);
 
-                    if (!token.isEmpty()) {
-                        ParseResult pr = parseColors(token, currentState);
-                        currentState = pr.state;
-                        line.segments.add(new TextSegment(pr.atoms, currentScale));
+                            Matcher m = SIZE_PATTERN.matcher(token);
+                            if (m.matches()) {
+                                currentScale = Integer.parseInt(m.group(1));
+                                token = m.group(2);
+                            }
+
+                            if (!token.isEmpty()) {
+                                ParseResult pr = parseColors(token, currentState);
+                                currentState = pr.state;
+                                TextSegment seg = new TextSegment(pr.atoms, currentScale);
+                                seg.spacesBefore = pendingSpaces;
+                                line.segments.add(seg);
+                                pendingSpaces = 0;
+                            }
+                        }
+                        if (i < rawLine.length() && c == ' ') {
+                            pendingSpaces++;
+                        }
+                    } else {
+                        tokenBuilder.append(c);
                     }
                 }
                 this.lines.add(line);
