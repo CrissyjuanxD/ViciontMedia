@@ -15,6 +15,7 @@ public class TextOrchestrator {
     private static final Map<String, TextData> activeTexts = new ConcurrentHashMap<>();
     private static final Pattern COLOR_PATTERN = Pattern.compile("&#([A-Fa-f0-9]{6})|&([0-9a-fk-orA-FK-OR+\\-])");
     private static final Pattern SIZE_PATTERN = Pattern.compile("^(-?\\d+)%(.*)");
+    private static final Pattern MULTI_SPACE_PATTERN = Pattern.compile("\\*(s+)\\*");
 
     public static class FormatState {
         public int color = 0xFFFFFF;
@@ -115,6 +116,7 @@ public class TextOrchestrator {
             this.animation = animation != null ? animation.toLowerCase() : "default";
 
             String unescapedText = unescapeUnicode(text);
+            unescapedText = expandMultiSpaces(unescapedText);
             String[] rawLines = unescapedText.replace("\\n", "\n").split("\n");
 
             FormatState currentState = new FormatState();
@@ -186,6 +188,16 @@ public class TextOrchestrator {
         public boolean isExpired() {
             return System.currentTimeMillis() > endTime;
         }
+    }
+
+    private static String expandMultiSpaces(String text) {
+        Matcher matcher = MULTI_SPACE_PATTERN.matcher(text);
+        StringBuilder sb = new StringBuilder();
+        while (matcher.find()) {
+            matcher.appendReplacement(sb, " ".repeat(matcher.group(1).length()));
+        }
+        matcher.appendTail(sb);
+        return sb.toString();
     }
 
     private static String unescapeUnicode(String text) {
