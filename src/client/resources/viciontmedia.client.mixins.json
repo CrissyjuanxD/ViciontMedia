@@ -7,7 +7,6 @@
 		"ChatHudMixin",
 		"GameRendererMixin",
 		"WindowMixin",
-		"PostEffectProcessorAccessor",
 		"PostEffectPassAccessor"
 	],
 	"injectors": {

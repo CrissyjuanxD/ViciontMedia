@@ -4,6 +4,7 @@ import com.vctmedia.util.TextOrchestrator;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gl.RenderPipelines; // NUEVO IMPORT (igual que en viciontguis)
 import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.client.util.Window;
 import net.minecraft.text.MutableText;
@@ -13,26 +14,20 @@ import net.minecraft.text.Text;
 public class TextOverlayRenderer {
     private static final float TEXT_SCALE = 2.4f;
 
-    // METODO PARA CALCULAR LA OLA DE PARPADEO (WAVE PULSATE)
     public static int calculatePulsateColor(int baseColor, long now, int charIndex) {
-        // Desfase de tiempo: Cada letra va 80ms "atrás" en el tiempo creando una ola de izq a der.
         long offset = charIndex * 80L;
-        // Evitar números negativos en el módulo usando absoluto o limitando a positivo
         long time = Math.max(0, now - offset);
 
-        // Ciclo de 1.5 segundos
         float cycle = (time % 1500L) / 1500.0f;
 
         float wave = (float) Math.sin(cycle * Math.PI);
-        // Elevado a la 6ta potencia hace que se quede en su color base mucho más tiempo,
-        // y el brillo blanco sea como un "flash" suave y rápido que pasa.
         float intensity = (float) Math.pow(wave, 6);
 
         int r1 = (baseColor >> 16) & 0xFF;
         int g1 = (baseColor >> 8) & 0xFF;
         int b1 = baseColor & 0xFF;
 
-        int r2 = 230; // Blanco difuminado
+        int r2 = 230;
         int g2 = 230;
         int b2 = 230;
 
@@ -187,7 +182,15 @@ public class TextOverlayRenderer {
 
         context.getMatrices().translate(x + offsetX, y + offsetY);
 
-        if (!data.isTransparent) {
+        // LÓGICA CORREGIDA PARA 1.21.1+ (RenderPipelines + Opacidad ARGB)
+        if (data.bgTexture != null) {
+            // Empaquetamos el alpha con color blanco para pasarlo como último argumento
+            int textureAlpha = (int)(255 * alphaFactor);
+            int textureColor = (textureAlpha << 24) | 0xFFFFFF;
+
+            // Usamos RenderPipelines.GUI_TEXTURED y el color al final, tal cual funciona en tu ViciontGuis
+            context.drawTexture(RenderPipelines.GUI_TEXTURED, data.bgTexture, 0, 0, 0.0f, 0.0f, (int)boxWidth, (int)boxHeight, (int)boxWidth, (int)boxHeight, textureColor);
+        } else if (!data.isTransparent) {
             int bgAlpha = (int)(140 * alphaFactor);
             int bgColorFinal = (bgAlpha << 24) | (data.bgColor & 0xFFFFFF);
             context.fill(0, 0, (int)boxWidth, (int)boxHeight, bgColorFinal);
@@ -221,9 +224,8 @@ public class TextOverlayRenderer {
                 context.getMatrices().translate(currentX, yOffset);
                 context.getMatrices().scale(segScale, segScale);
 
-                // ITERAMOS CADA ÁTOMO CON SU EFECTO APLICADO LETRA POR LETRA
                 MutableText frameText = Text.empty();
-                int charIndex = 0; // Índice de la letra para crear la ola
+                int charIndex = 0;
 
                 for (TextOrchestrator.AtomicText atom : seg.atoms) {
                     if (atom.pulsate) {
@@ -234,7 +236,7 @@ public class TextOverlayRenderer {
                                     .withUnderline(atom.underline).withStrikethrough(atom.strike)
                                     .withObfuscated(atom.obfuscated);
                             frameText.append(Text.literal(String.valueOf(atom.text.charAt(c))).setStyle(style));
-                            charIndex++; // Incrementa para desfasar la ola de la siguiente letra
+                            charIndex++;
                         }
                     } else {
                         Style style = Style.EMPTY.withColor(atom.color)

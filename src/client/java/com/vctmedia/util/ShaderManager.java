@@ -1,135 +1,200 @@
 package com.vctmedia.util;
 
-import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.vctmedia.mixin.client.PostEffectPassAccessor;
-import com.vctmedia.mixin.client.PostEffectProcessorAccessor;
+import com.vctmedia.ViciontMedia;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.PostEffectPass;
+import net.minecraft.client.gl.Framebuffer;
 import net.minecraft.client.gl.PostEffectProcessor;
-import net.minecraft.client.gl.ShaderLoader;
+import net.minecraft.client.gl.SimpleFramebuffer;
+import net.minecraft.client.render.DefaultFramebufferSet;
+import net.minecraft.client.render.FrameGraphBuilder;
+import net.minecraft.client.render.GameRenderer;
+import net.minecraft.client.util.Handle;
+import net.minecraft.client.util.memory.ObjectAllocator;
 import net.minecraft.util.Identifier;
+import org.jetbrains.annotations.Nullable;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
+/**
+ * Shader manager for Minecraft 1.21.11 (yarn build.6).
+ *
+ * Key API changes from 1.21.1:
+ * - PostEffectProcessor loaded via client.getShaderLoader().loadPostEffect(id, DefaultFramebufferSet.MAIN_ONLY)
+ * - render() takes (FrameGraphBuilder, int, int, FramebufferSet) instead of (float tickDelta)
+ * - FrameGraphBuilder.run() takes ObjectAllocator (ObjectPool implements ObjectAllocator)
+ *   — ObjectAllocator is in net.minecraft.client.util.memory, not net.minecraft.client.util
+ * - setupDimensions() removed
+ * - PostEffectPass no longer has getProgram() — uniforms are GPU-buffer-backed, no GlUniform.set()
+ * - Framebuffer.close() replaced by Framebuffer.delete()
+ * - Fade animation must be done shader-side (using GameTime from Globals uniform block)
+ */
 public class ShaderManager {
 
     public static final List<String> SHADERS = Arrays.asList(
-            "none", "antialias", "art", "bits", "blobs", "blobs2", "blur", "bumpy",
+            "none",
+            "antialias", "art", "bits", "blobs", "blobs2", "blur", "bumpy",
             "color_convolve", "creeper", "deconverge", "desaturate", "flip",
             "green", "invert", "notch", "ntsc", "outline", "pencil", "phosphor",
-            "scan_pincushion", "sobel", "spider", "wobble", "wobbleslow", "blood",
-            "nightv", "wobblelava", "confusion", "anim_sobel"
+            "scan_pincushion", "sobel", "spider", "wobble", "wobbleslow",
+            "blood", "nightv", "wobblelava", "confusion", "anim_sobel"
     );
 
-    private static final Set<String> CUSTOM_SHADERS = new HashSet<>(Arrays.asList(
-            "anim_sobel", "blood", "confusion", "green", "nightv", "wobblelava", "wobbleslow"
-    ));
+    private static final Set<String> CUSTOM_SHADERS = Set.of(
+            "blood", "nightv", "wobblelava", "confusion", "anim_sobel"
+    );
 
-    public static PostEffectProcessor currentShader;
-    public static boolean isEnabled = false;
-    public static LinkedList<String> shaderStack = new LinkedList<>();
+    @Nullable
+    private static PostEffectProcessor currentShader;
+    private static boolean isEnabled = false;
+    private static int shaderIndex = 0;
+
+    @Nullable
+    private static Framebuffer swapBuffer;
+
+    public static void cycleShader() {
+        shaderIndex = (shaderIndex + 1) % SHADERS.size();
+        loadShader(SHADERS.get(shaderIndex));
+    }
+
+    public static void toggleShader() {
+        String name = SHADERS.get(shaderIndex);
+        if (isEnabled) {
+            removeShader(name);
+        } else {
+            if (name.equals("none")) {
+                shaderIndex = 1;
+                name = SHADERS.get(shaderIndex);
+            }
+            loadShader(name);
+        }
+    }
 
     public static void loadShader(String name) {
-        if (name == null || name.equalsIgnoreCase("none") || name.equalsIgnoreCase("off") || name.equalsIgnoreCase("normal")) {
-            removeShader("none");
+        if (name == null || name.equalsIgnoreCase("none") || name.equalsIgnoreCase("off")) {
+            removeShader(name);
             return;
         }
 
-        shaderStack.remove(name);
-        shaderStack.addLast(name);
-        applyTopShader();
-    }
-
-    public static void removeShader(String name) {
-        if (name != null && !name.equalsIgnoreCase("none")) {
-            shaderStack.remove(name);
-        } else {
-            shaderStack.clear();
-        }
-
-        isEnabled = false;
-        if (currentShader != null) {
-            currentShader.close();
-            currentShader = null;
-        }
-        if (!shaderStack.isEmpty()) {
-            applyTopShader();
-        }
-    }
-
-    private static void applyTopShader() {
         MinecraftClient client = MinecraftClient.getInstance();
         client.execute(() -> {
-
-            if (shaderStack.isEmpty()) {
-                return;
-            }
-
-            String topShader = shaderStack.getLast();
-            Identifier shaderId = Identifier.of("minecraft", "post_effect/" + topShader.toLowerCase() + ".json");
-
             try {
+                Identifier shaderId = getShaderIdentifier(name);
+                PostEffectProcessor effect = client.getShaderLoader()
+                        .loadPostEffect(shaderId, DefaultFramebufferSet.MAIN_ONLY);
+
+                if (effect == null) {
+                    System.err.println("No se pudo cargar el shader: " + name);
+                    return;
+                }
+
                 if (currentShader != null) {
                     currentShader.close();
                     currentShader = null;
                 }
 
-                ShaderLoader shaderLoader = client.getShaderLoader();
-                Set<Identifier> externalTargets = new HashSet<>();
-                externalTargets.add(PostEffectProcessor.MAIN);
-                currentShader = shaderLoader.loadPostEffect(shaderId, externalTargets);
-
+                currentShader = effect;
                 isEnabled = true;
 
             } catch (Exception e) {
-                System.err.println("No se pudo cargar el shader: " + topShader);
+                System.err.println("Error al cargar el shader '" + name + "': " + e.getMessage());
                 e.printStackTrace();
-                shaderStack.removeLast();
-                applyTopShader();
             }
         });
     }
 
-    public static void updateFadeAnim() {
-        if (!isEnabled || currentShader == null) return;
-
-        float fadeAlpha = FadeManager.getFadeAlpha();
-        if (fadeAlpha <= 0.0f) return;
-
-        PostEffectProcessorAccessor processorAccessor = (PostEffectProcessorAccessor) (Object) currentShader;
-        List<PostEffectPass> passes = processorAccessor.getPasses();
-
-        for (PostEffectPass pass : passes) {
-            PostEffectPassAccessor passAccessor = (PostEffectPassAccessor) (Object) pass;
-            String passId = passAccessor.getId();
-
-            if ("anim_sobel".equals(passId)) {
-                Map<String, GpuBuffer> uniformBuffers = passAccessor.getUniformBuffers();
-                GpuBuffer oldBuffer = uniformBuffers.get("Fade");
-                if (oldBuffer != null) {
-                    oldBuffer.close();
-                }
-
-                ByteBuffer data = ByteBuffer.allocateDirect(4).order(ByteOrder.nativeOrder());
-                data.putFloat(fadeAlpha);
-                data.flip();
-
-                GpuBuffer newBuffer = RenderSystem.getDevice().createBuffer(
-                        () -> "vctmedia_fade_uniform",
-                        GpuBuffer.USAGE_UNIFORM,
-                        data
-                );
-                uniformBuffers.put("Fade", newBuffer);
-                break;
-            }
+    public static void removeShader(String name) {
+        isEnabled = false;
+        if (currentShader != null) {
+            currentShader.close();
+            currentShader = null;
         }
+    }
+
+    private static Identifier getShaderIdentifier(String name) {
+        if (CUSTOM_SHADERS.contains(name)) {
+            return ViciontMedia.id(name);
+        }
+        return Identifier.of("minecraft", name);
+    }
+
+    /**
+     * Called every frame from GameRendererMixin to render the active post effect.
+     * Uses the same pattern as HazelTheWitch/impact-frames:
+     * FrameGraphBuilder + FramebufferSet + builder.run(allocator).
+     */
+    public static void render(GameRenderer renderer) {
+        if (!isEnabled || currentShader == null) {
+            return;
+        }
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        Framebuffer mainBuffer = client.getFramebuffer();
+        int width = mainBuffer.textureWidth;
+        int height = mainBuffer.textureHeight;
+
+        if (swapBuffer == null
+                || swapBuffer.textureWidth != width
+                || swapBuffer.textureHeight != height) {
+            if (swapBuffer != null) {
+                swapBuffer.delete();
+            }
+            swapBuffer = new SimpleFramebuffer("swap", width, height, true);
+        }
+
+        FrameGraphBuilder builder = new FrameGraphBuilder();
+
+        PostEffectProcessor.FramebufferSet framebufferSet = new PostEffectProcessor.FramebufferSet() {
+            private final Map<Identifier, Handle<Framebuffer>> map = new HashMap<>();
+
+            {
+                Handle<Framebuffer> main = builder.createObjectNode("main", mainBuffer);
+                map.put(PostEffectProcessor.MAIN, main);
+
+                Handle<Framebuffer> swap = builder.createObjectNode("swap", swapBuffer);
+                map.put(ViciontMedia.id("swap"), swap);
+                map.put(Identifier.of("minecraft", "swap"), swap);
+            }
+
+            @Override
+            public void set(Identifier id, Handle<Framebuffer> framebuffer) {
+                map.put(id, framebuffer);
+            }
+
+            @Override
+            public @Nullable Handle<Framebuffer> get(Identifier id) {
+                return map.get(id);
+            }
+        };
+
+        try {
+            currentShader.render(builder, width, height, framebufferSet);
+
+            if (renderer instanceof GameRendererPoolAccessor accessor) {
+                ObjectAllocator allocator = accessor.getPool();
+                builder.run(allocator);
+            }
+        } catch (Exception e) {
+            System.err.println("Error renderizando shader: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public static void onResize() {
+        if (swapBuffer != null) {
+            MinecraftClient client = MinecraftClient.getInstance();
+            int width = client.getWindow().getFramebufferWidth();
+            int height = client.getWindow().getFramebufferHeight();
+            swapBuffer.delete();
+            swapBuffer = new SimpleFramebuffer("swap", width, height, true);
+        }
+    }
+
+    public static boolean isEnabled() {
+        return isEnabled;
+    }
+
+    public static String getCurrentShaderName() {
+        if (shaderIndex < 0 || shaderIndex >= SHADERS.size()) return "none";
+        return SHADERS.get(shaderIndex);
     }
 }

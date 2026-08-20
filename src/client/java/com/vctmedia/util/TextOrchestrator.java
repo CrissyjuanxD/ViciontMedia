@@ -3,6 +3,7 @@ package com.vctmedia.util;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Style;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -101,6 +102,7 @@ public class TextOrchestrator {
         public final List<TextLine> lines = new ArrayList<>();
         public final int bgColor;
         public final boolean isTransparent;
+        public final Identifier bgTexture;
         public final String pos;
         public long endTime;
         public long startTime;
@@ -123,7 +125,6 @@ public class TextOrchestrator {
             int currentScale = 0;
 
             for (String rawLine : rawLines) {
-                // AQUI ESTA LA MAGIA: Reseteamos el color y estilo al inicio de cada línea.
                 currentState.reset();
 
                 TextLine line = new TextLine();
@@ -170,19 +171,28 @@ public class TextOrchestrator {
                 this.lines.add(line);
             }
 
+            Identifier parsedTexture = null;
             int parsedColor = 0;
             boolean transparent = false;
+
             try {
-                String cleanHex = bgColorStr.startsWith("#") ? bgColorStr.substring(1) : bgColorStr;
-                if (cleanHex.equalsIgnoreCase("none") || cleanHex.equalsIgnoreCase("transparent")) {
+                String cleanBg = bgColorStr.trim();
+
+                if (cleanBg.equalsIgnoreCase("none") || cleanBg.equalsIgnoreCase("transparent")) {
                     transparent = true;
-                } else if (!cleanHex.isEmpty()) {
-                    parsedColor = Integer.parseInt(cleanHex, 16);
+                } else if (cleanBg.toLowerCase().endsWith(".png")) {
+                    parsedTexture = Identifier.of("viciontmedia", "textures/hudtext/" + cleanBg);
+                } else {
+                    String cleanHex = cleanBg.startsWith("#") ? cleanBg.substring(1) : cleanBg;
+                    if (!cleanHex.isEmpty()) {
+                        parsedColor = Integer.parseInt(cleanHex, 16);
+                    }
                 }
             } catch (Exception ignored) {}
 
             this.bgColor = parsedColor;
-            this.isTransparent = transparent;
+            this.bgTexture = parsedTexture;
+            this.isTransparent = transparent && this.bgTexture == null;
         }
 
         public boolean isExpired() {

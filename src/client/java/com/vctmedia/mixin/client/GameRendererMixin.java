@@ -1,27 +1,36 @@
 package com.vctmedia.mixin.client;
 
+import com.vctmedia.util.GameRendererPoolAccessor;
 import com.vctmedia.util.ShaderManager;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.client.util.memory.ObjectAllocator;
+import net.minecraft.client.util.memory.ObjectPool;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(GameRenderer.class)
-public abstract class GameRendererMixin {
+public abstract class GameRendererMixin implements GameRendererPoolAccessor {
 
-    @Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/GameRenderer;updateWorldIcon()V"))
-    private void renderCustomShader(RenderTickCounter tickCounter, boolean tick, CallbackInfo ci) {
+    @Final
+    @Shadow
+    private ObjectPool pool;
 
-        ShaderManager.updateFadeAnim();
+    @Override
+    public ObjectAllocator getPool() {
+        return this.pool;
+    }
 
-        if (ShaderManager.isEnabled && ShaderManager.currentShader != null) {
-            MinecraftClient client = MinecraftClient.getInstance();
-            ObjectAllocator allocator = ObjectAllocator.TRIVIAL;
-                ShaderManager.currentShader.render(client.getFramebuffer(), allocator);
-        }
+    @Inject(
+            method = "renderWorld",
+            at = @At("RETURN")
+    )
+    private void vctmedia$renderCustomShader(RenderTickCounter tickCounter, CallbackInfo ci) {
+        GameRenderer renderer = (GameRenderer) (Object) this;
+        ShaderManager.render(renderer);
     }
 }

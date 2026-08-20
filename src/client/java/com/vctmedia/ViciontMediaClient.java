@@ -32,6 +32,9 @@ public class ViciontMediaClient implements ClientModInitializer {
     private static KeyBinding volumeUp;
     private static KeyBinding volumeDown;
 
+    public static KeyBinding cycleShaderKey;
+    public static KeyBinding toggleShaderKey;
+
     @Override
     public void onInitializeClient() {
         if (!Files.exists(MEDIA_DIR)) {
@@ -39,6 +42,7 @@ public class ViciontMediaClient implements ClientModInitializer {
         }
 
         KeyBinding.Category vctCategory = KeyBinding.Category.create(Identifier.of(ViciontMedia.MOD_ID, "category"));
+
         volumeUp = KeyBindingHelper.registerKeyBinding(new KeyBinding("Subir Volumen", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_UP, vctCategory));
         volumeDown = KeyBindingHelper.registerKeyBinding(new KeyBinding("Bajar Volumen", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_DOWN, vctCategory));
 
