@@ -14,10 +14,6 @@ out vec4 fragColor;
 void main() {
     vec4 center = texture(InSampler, texCoord);
 
-    // Fade in over ~1 second using GameTime (ticks * 20 per second)
-    // GameTime increments by 1/20 per tick, so multiply by 20 to get seconds
-    float fade = clamp(GameTime * 20.0 * 2.0, 0.0, 1.0);
-
     vec2 oneTexel = 1.0 / InSize;
 
     vec4 left   = texture(InSampler, texCoord - vec2(oneTexel.x, 0.0));
@@ -32,5 +28,5 @@ void main() {
 
     vec4 total = clamp(leftDiff + rightDiff + upDiff + downDiff, 0.0, 1.0);
 
-    fragColor = mix(center, vec4(total.rgb, 1.0), fade);
+    fragColor = vec4(total.rgb, 1.0);
 }

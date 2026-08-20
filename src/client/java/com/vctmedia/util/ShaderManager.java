@@ -15,19 +15,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-/**
- * Shader manager for Minecraft 1.21.11 (yarn build.6).
- *
- * Key API changes from 1.21.1:
- * - PostEffectProcessor loaded via client.getShaderLoader().loadPostEffect(id, DefaultFramebufferSet.MAIN_ONLY)
- * - render() takes (FrameGraphBuilder, int, int, FramebufferSet) instead of (float tickDelta)
- * - FrameGraphBuilder.run() takes ObjectAllocator (ObjectPool implements ObjectAllocator)
- *   — ObjectAllocator is in net.minecraft.client.util.memory, not net.minecraft.client.util
- * - setupDimensions() removed
- * - PostEffectPass no longer has getProgram() — uniforms are GPU-buffer-backed, no GlUniform.set()
- * - Framebuffer.close() replaced by Framebuffer.delete()
- * - Fade animation must be done shader-side (using GameTime from Globals uniform block)
- */
 public class ShaderManager {
 
     public static final List<String> SHADERS = Arrays.asList(
@@ -47,6 +34,9 @@ public class ShaderManager {
     private static PostEffectProcessor currentShader;
     private static boolean isEnabled = false;
     private static int shaderIndex = 0;
+
+    private static long shaderFadeStartMs = 0;
+    private static final long SHADER_FADE_DURATION = 800;
 
     @Nullable
     private static Framebuffer swapBuffer;
@@ -83,7 +73,8 @@ public class ShaderManager {
                         .loadPostEffect(shaderId, DefaultFramebufferSet.MAIN_ONLY);
 
                 if (effect == null) {
-                    System.err.println("No se pudo cargar el shader: " + name);
+                    System.err.println("[ViciontMedia] No se pudo cargar el shader: " + name);
+                    isEnabled = false;
                     return;
                 }
 
@@ -94,18 +85,21 @@ public class ShaderManager {
 
                 currentShader = effect;
                 isEnabled = true;
+                shaderFadeStartMs = System.currentTimeMillis();
 
             } catch (Exception e) {
-                System.err.println("Error al cargar el shader '" + name + "': " + e.getMessage());
+                System.err.println("[ViciontMedia] Error al cargar el shader '" + name + "': " + e.getMessage());
                 e.printStackTrace();
+                isEnabled = false;
             }
         });
     }
 
     public static void removeShader(String name) {
         isEnabled = false;
+        shaderFadeStartMs = 0;
         if (currentShader != null) {
-            currentShader.close();
+            try { currentShader.close(); } catch (Exception ignored) {}
             currentShader = null;
         }
     }
@@ -117,11 +111,6 @@ public class ShaderManager {
         return Identifier.of("minecraft", name);
     }
 
-    /**
-     * Called every frame from GameRendererMixin to render the active post effect.
-     * Uses the same pattern as HazelTheWitch/impact-frames:
-     * FrameGraphBuilder + FramebufferSet + builder.run(allocator).
-     */
     public static void render(GameRenderer renderer) {
         if (!isEnabled || currentShader == null) {
             return;
@@ -174,9 +163,25 @@ public class ShaderManager {
                 builder.run(allocator);
             }
         } catch (Exception e) {
-            System.err.println("Error renderizando shader: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println("[ViciontMedia] Error renderizando shader, desactivando: " + e.getMessage());
+            isEnabled = false;
+            shaderFadeStartMs = 0;
+            if (currentShader != null) {
+                try { currentShader.close(); } catch (Exception ignored) {}
+                currentShader = null;
+            }
         }
+    }
+
+    public static float getFadeAlpha() {
+        if (!isEnabled || shaderFadeStartMs == 0) {
+            return 0.0f;
+        }
+        long elapsed = System.currentTimeMillis() - shaderFadeStartMs;
+        if (elapsed >= SHADER_FADE_DURATION) {
+            return 0.0f;
+        }
+        return 1.0f - ((float) elapsed / SHADER_FADE_DURATION);
     }
 
     public static void onResize() {

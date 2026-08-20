@@ -4,6 +4,7 @@ import com.vctmedia.render.MediaOverlay;
 import com.vctmedia.render.TextOverlayRenderer;
 import com.vctmedia.render.FadeRenderer;
 import com.vctmedia.util.FadeManager;
+import com.vctmedia.util.ShaderManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.InGameHud;
@@ -67,6 +68,12 @@ public abstract class InGameHudMixin {
 			if (alpha > 0.0f) {
 				FadeRenderer.render(context, client, alpha);
 			}
+		}
+
+		// 3. Fade del shader: transicion suave desde negro al activar un shader
+		float shaderFade = ShaderManager.getFadeAlpha();
+		if (shaderFade > 0.0f) {
+			FadeRenderer.render(context, client, shaderFade);
 		}
 	}
 
