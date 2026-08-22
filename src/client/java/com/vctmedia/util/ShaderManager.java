@@ -79,7 +79,7 @@ public class ShaderManager {
                 }
 
                 if (currentShader != null) {
-                    currentShader.close();
+                    // FIX: Eliminado currentShader.close(); para no romper la caché
                     currentShader = null;
                 }
 
@@ -99,7 +99,7 @@ public class ShaderManager {
         isEnabled = false;
         shaderFadeStartMs = 0;
         if (currentShader != null) {
-            try { currentShader.close(); } catch (Exception ignored) {}
+            // FIX: Eliminado try { currentShader.close(); } para no romper la caché
             currentShader = null;
         }
     }
@@ -167,7 +167,7 @@ public class ShaderManager {
             isEnabled = false;
             shaderFadeStartMs = 0;
             if (currentShader != null) {
-                try { currentShader.close(); } catch (Exception ignored) {}
+                // FIX: Eliminado try { currentShader.close(); } para evitar romper la caché en caso de fallo
                 currentShader = null;
             }
         }
