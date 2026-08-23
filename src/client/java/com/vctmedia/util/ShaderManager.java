@@ -38,8 +38,14 @@ public class ShaderManager {
     private static long shaderFadeStartMs = 0;
     private static final long SHADER_FADE_DURATION = 800;
 
+    private static final Set<String> FADE_SHADERS = Set.of("anim_sobel");
+
     @Nullable
     private static Framebuffer swapBuffer;
+    @Nullable
+    private static Framebuffer previousBuffer;
+    @Nullable
+    private static String currentShaderName = null;
 
     public static void cycleShader() {
         shaderIndex = (shaderIndex + 1) % SHADERS.size();
@@ -85,7 +91,12 @@ public class ShaderManager {
 
                 currentShader = effect;
                 isEnabled = true;
-                shaderFadeStartMs = System.currentTimeMillis();
+                currentShaderName = name;
+                if (FADE_SHADERS.contains(name)) {
+                    shaderFadeStartMs = System.currentTimeMillis();
+                } else {
+                    shaderFadeStartMs = 0;
+                }
 
             } catch (Exception e) {
                 System.err.println("[ViciontMedia] Error al cargar el shader '" + name + "': " + e.getMessage());
@@ -98,6 +109,7 @@ public class ShaderManager {
     public static void removeShader(String name) {
         isEnabled = false;
         shaderFadeStartMs = 0;
+        currentShaderName = null;
         if (currentShader != null) {
             // FIX: Eliminado try { currentShader.close(); } para no romper la caché
             currentShader = null;
@@ -130,6 +142,15 @@ public class ShaderManager {
             swapBuffer = new SimpleFramebuffer("swap", width, height, true);
         }
 
+        if (previousBuffer == null
+                || previousBuffer.textureWidth != width
+                || previousBuffer.textureHeight != height) {
+            if (previousBuffer != null) {
+                previousBuffer.delete();
+            }
+            previousBuffer = new SimpleFramebuffer("previous", width, height, true);
+        }
+
         FrameGraphBuilder builder = new FrameGraphBuilder();
 
         PostEffectProcessor.FramebufferSet framebufferSet = new PostEffectProcessor.FramebufferSet() {
@@ -142,6 +163,10 @@ public class ShaderManager {
                 Handle<Framebuffer> swap = builder.createObjectNode("swap", swapBuffer);
                 map.put(ViciontMedia.id("swap"), swap);
                 map.put(Identifier.of("minecraft", "swap"), swap);
+
+                Handle<Framebuffer> previous = builder.createObjectNode("previous", previousBuffer);
+                map.put(ViciontMedia.id("previous"), previous);
+                map.put(Identifier.of("minecraft", "previous"), previous);
             }
 
             @Override
@@ -185,12 +210,16 @@ public class ShaderManager {
     }
 
     public static void onResize() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        int width = client.getWindow().getFramebufferWidth();
+        int height = client.getWindow().getFramebufferHeight();
         if (swapBuffer != null) {
-            MinecraftClient client = MinecraftClient.getInstance();
-            int width = client.getWindow().getFramebufferWidth();
-            int height = client.getWindow().getFramebufferHeight();
             swapBuffer.delete();
             swapBuffer = new SimpleFramebuffer("swap", width, height, true);
+        }
+        if (previousBuffer != null) {
+            previousBuffer.delete();
+            previousBuffer = new SimpleFramebuffer("previous", width, height, true);
         }
     }
 
