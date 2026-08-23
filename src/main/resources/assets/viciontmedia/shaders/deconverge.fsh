@@ -14,8 +14,8 @@ out vec4 fragColor;
 void main() {
     vec2 oneTexel = 1.0 / InSize;
 
-    vec3 ConvergeX = vec3(-1.0, 0.0, 0.5);
-    vec3 ConvergeY = vec3(0.0, -1.0, 0.5);
+    vec3 ConvergeX = vec3(-4.0, 0.0, 3.0);
+    vec3 ConvergeY = vec3(0.0, -4.0, 3.0);
     vec3 RadialConvergeX = vec3(1.0, 1.0, 1.0);
     vec3 RadialConvergeY = vec3(1.0, 1.0, 1.0);
 

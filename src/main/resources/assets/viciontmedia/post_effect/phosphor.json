@@ -1,7 +1,6 @@
 {
   "targets": {
-    "swap": {},
-    "previous": {}
+    "swap": {}
   },
   "passes": [
     {
@@ -18,17 +17,6 @@
         }
       ],
       "output": "swap"
-    },
-    {
-      "vertex_shader": "minecraft:core/screenquad",
-      "fragment_shader": "viciontmedia:blit",
-      "inputs": [
-        {
-          "sampler_name": "In",
-          "target": "swap"
-        }
-      ],
-      "output": "previous"
     },
     {
       "vertex_shader": "minecraft:core/screenquad",

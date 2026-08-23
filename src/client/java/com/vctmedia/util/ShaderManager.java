@@ -33,6 +33,8 @@ public class ShaderManager {
 
     @Nullable
     private static PostEffectProcessor currentShader;
+    @Nullable
+    private static PostEffectProcessor savePreviousEffect;
     private static boolean isEnabled = false;
     private static int shaderIndex = 0;
 
@@ -40,6 +42,7 @@ public class ShaderManager {
     private static final long SHADER_FADE_DURATION = 800;
 
     private static final Set<String> FADE_SHADERS = Set.of("anim_sobel");
+    private static final Set<String> PREV_BUFFER_SHADERS = Set.of("phosphor", "confusion");
 
     @Nullable
     private static Framebuffer swapBuffer;
@@ -99,6 +102,17 @@ public class ShaderManager {
                     shaderFadeStartMs = 0;
                 }
 
+                if (PREV_BUFFER_SHADERS.contains(name)) {
+                    try {
+                        savePreviousEffect = client.getShaderLoader()
+                                .loadPostEffect(ViciontMedia.id("save_previous"), DefaultFramebufferSet.MAIN_ONLY);
+                    } catch (Exception ignored) {
+                        savePreviousEffect = null;
+                    }
+                } else {
+                    savePreviousEffect = null;
+                }
+
             } catch (Exception e) {
                 System.err.println("[ViciontMedia] Error al cargar el shader '" + name + "': " + e.getMessage());
                 e.printStackTrace();
@@ -115,6 +129,7 @@ public class ShaderManager {
             // FIX: Eliminado try { currentShader.close(); } para no romper la caché
             currentShader = null;
         }
+        savePreviousEffect = null;
     }
 
     private static Identifier getShaderIdentifier(String name) {
@@ -184,6 +199,10 @@ public class ShaderManager {
         try {
             currentShader.render(builder, width, height, framebufferSet);
 
+            if (savePreviousEffect != null) {
+                savePreviousEffect.render(builder, width, height, framebufferSet);
+            }
+
             if (renderer instanceof GameRendererPoolAccessor accessor) {
                 ObjectAllocator allocator = accessor.getPool();
                 builder.run(allocator);
@@ -196,6 +215,7 @@ public class ShaderManager {
                 // FIX: Eliminado try { currentShader.close(); } para evitar romper la caché en caso de fallo
                 currentShader = null;
             }
+            savePreviousEffect = null;
         }
     }
 
