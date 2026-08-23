@@ -27,7 +27,8 @@ public class ShaderManager {
     );
 
     private static final Set<String> CUSTOM_SHADERS = Set.of(
-            "blood", "nightv", "wobblelava", "confusion", "anim_sobel"
+            "blood", "nightv", "wobblelava", "confusion", "anim_sobel",
+            "color_convolve", "deconverge", "desaturate", "phosphor"
     );
 
     @Nullable
